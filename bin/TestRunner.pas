@@ -69,38 +69,62 @@ begin
   
 end;
 
+type
+  [System.Serializable]
+  CompileAllRunTests_Helper = auto class
+    
+    withdll, only32bit: boolean;
+    batch: array of string;
+    
+    procedure Exec;
+    begin
+      var comp := new Compiler();
+      
+      foreach var fname in batch do
+      begin
+        var content := &File.ReadAllText(fname);
+        if content.StartsWith('//winonly') and IsUnix then
+          continue;
+        var co: CompilerOptions := new CompilerOptions(fname, CompilerOptions.OutputType.ConsoleApplicaton);
+        co.Debug := true;
+        co.OutputDirectory := TestSuiteDir + PathSeparator + 'exe';
+        co.UseDllForSystemUnits := withdll;
+        co.RunWithEnvironment := false;
+        co.IgnoreRtlErrors := false;
+        co.Only32Bit := only32bit;
+        comp.ErrorsList.Clear();
+        comp.Warnings.Clear();
+        
+        comp.Compile(co);
+        if comp.ErrorsList.Count > 0 then
+        begin
+          System.Windows.Forms.MessageBox.Show($'Compilation of {fname} failed{System.Environment.NewLine}{comp.ErrorsList[0]}');
+          Halt();
+        end;
+      end;
+      
+    end;
+    
+  end;
+
 procedure CompileAllRunTests(withdll: boolean; only32bit: boolean := false);
 begin
   
-  var comp := new Compiler();
-  
-  var files := Directory.GetFiles(TestSuiteDir, '*.pas');
-  for var i := 0 to files.Length - 1 do
+  foreach var batch in Directory.GetFiles(TestSuiteDir, '*.pas').Take(50).Batch(30) do
   begin
-    var content := &File.ReadAllText(files[i]);
-    if content.StartsWith('//winonly') and IsUnix then
-      continue;
-    var co: CompilerOptions := new CompilerOptions(files[i], CompilerOptions.OutputType.ConsoleApplicaton);
-    co.Debug := true;
-    co.OutputDirectory := TestSuiteDir + PathSeparator + 'exe';
-    co.UseDllForSystemUnits := withdll;
-    co.RunWithEnvironment := false;
-    co.IgnoreRtlErrors := false;
-    co.Only32Bit := only32bit;
-    comp.ErrorsList.Clear();
-    comp.Warnings.Clear();
+    var ad := System.AppDomain.CreateDomain('TestRunner sub domain');
     
-    comp.Compile(co);
-    if comp.ErrorsList.Count > 0 then
-    begin
-      System.Windows.Forms.MessageBox.Show('Compilation of ' + files[i] + ' failed' + System.Environment.NewLine + comp.ErrorsList[0].ToString());
-      Halt();
-    end;
-    if i mod 20 = 0 then
-    begin
-      System.GC.Collect();
-    end;  
+    ad.DoCallBack(
+      CompileAllRunTests_Helper.Create(
+        withdll, only32bit,
+        batch.ToArray
+      ).Exec
+    );
+    
+    System.AppDomain.Unload(ad);
+    System.GC.Collect();
   end;
+  
   //Println;
 end;
 
@@ -335,6 +359,7 @@ begin
   try
     TestSuiteDir := GetTestSuiteDir;
     System.Environment.CurrentDirectory := Path.GetDirectoryName(GetEXEFileName());
+    
     if (ParamCount = 0) or (ParamStr(1) = '1') then
     begin
       DeletePCUFiles;
@@ -342,11 +367,15 @@ begin
       CompileAllRunTests(false);
     end;
     
+    System.GC.Collect;
+    ReadlnString('CompileAllRunTests done');
+    
     if (ParamCount = 0) or (ParamStr(1) = '2') then
     begin
       CopyLibFiles;
       CompileAllCompilationTests('CompilationSamples', false);
     end;
+    
     if (ParamCount = 0) or (ParamStr(1) = '3') then
     begin
       CompileAllUnits;
@@ -355,6 +384,7 @@ begin
       CompileErrorTests(false);
       writeln('Tests compiled successfully');
     end;
+    
     if (ParamCount = 0) or (ParamStr(1) = '4') then
     begin
       RunAllTests(false);
@@ -362,6 +392,7 @@ begin
       ClearExeDir;
       DeletePCUFiles;
     end;
+    
     if (ParamCount = 0) or (ParamStr(1) = '5') then
     begin
       CompileAllRunTests(true);
@@ -382,6 +413,7 @@ begin
       RunFormatterTests;
       writeln('Formatter tests run successfully');
     end;
+    
   except
     on e: Exception do
       assert(false, e.ToString());
