@@ -7,6 +7,9 @@
 {$reference Localization.dll}
 {$reference System.Windows.Forms.dll}
 
+//ToDo issue компилятора заставляющие делать костыли:
+// - #1588
+
 uses PascalABCCompiler, System.IO, System.Diagnostics;
 
 var
@@ -15,6 +18,9 @@ var
   
   TestSuiteDir := Concat(Path.GetDirectoryName(GetCurrentDir), PathSep, 'TestSuite');
   LibDir := Concat(GetCurrentDir, PathSep, 'Lib');
+
+procedure PauseIsNonRedirect :=
+if not System.Console.IsOutputRedirected then System.Console.ReadLine;
 
 {$region Compiling}
 
@@ -29,6 +35,7 @@ type
     batch: array of string;
     
     static comp := new Compiler;
+    static curr_test_id := 0;
     
     ///Обычная компиляция
     static function GetStdCH(batch: array of string; with_dll: boolean; only32bit: boolean): BatchCompHelper;
@@ -66,6 +73,7 @@ type
       
       foreach var fname in batch do
       begin
+        curr_test_id += 1;
         if &File.ReadAllText(fname).Contains('//winonly') and IsNotWin then continue;
         
         
@@ -88,14 +96,16 @@ type
           
           if comp.ErrorsList.Count = 0 then
           begin
-            System.Console.WriteLine($'Compilation of error sample {fname} was successfull');
+            System.Console.WriteLine($'Compilation of error sample {fname} in test #{curr_test_id} was successfull');
+            PauseIsNonRedirect;
             Halt(-1);
           end else
           foreach var err in comp.ErrorsList do
             //ToDo найти почему без "as object" не работает
             if err as object is Errors.CompilerInternalError then
             begin
-              System.Console.WriteLine($'Compilation of {fname} failed with internal error{System.Environment.NewLine}{err}');
+              System.Console.WriteLine($'Compilation of {fname} in test #{curr_test_id} failed with internal error{System.Environment.NewLine}{err}');
+              PauseIsNonRedirect;
               Halt(-1);
             end;
           
@@ -103,7 +113,8 @@ type
         if comp.ErrorsList.Count <> 0 then
         begin
           
-          System.Console.WriteLine($'Compilation of {fname} failed{System.Environment.NewLine}{comp.ErrorsList[0]}');
+          System.Console.WriteLine($'Compilation of {fname} in test #{curr_test_id} failed{System.Environment.NewLine}{comp.ErrorsList[0]}');
+          PauseIsNonRedirect;
           Halt(-1);
           
         end;
@@ -122,64 +133,54 @@ type
 procedure CompileInBatches(path: string; cib: integer; get_bch: IEnumerable<string> -> BatchCompHelper);
 begin
   
-  var done := 0;
-  var done_lock := new object;
-  
-  var total := 0;
-  var last_otp := System.DateTime.Now;
-  var init_done := false;
-  
-  foreach var batch in
+  var total_files := 0;
+  var batches: array of sequence of string :=
     Directory
     .EnumerateFiles(path, '*.pas')
-    .Batch(cib)
-  do
-  begin
-    total += 1;
-    System.Threading.Tasks.Task.Create(
-      ()->
-      try
-        //Надо обязательно выполнять в отдельном домене
-        //Иначе не выйдет удалить сборки, которые создаёт компилятор
-        var ad := System.AppDomain.CreateDomain('TestRunner sub domain for compiling');
-        
-        ad.DoCallBack(get_bch(batch).Exec);
-        
-        lock done_lock do
-        begin
-          var ndone := done + 1;
-          var curr_otp := DateTime.Now;
-          if (ndone = total) or (init_done and ((curr_otp-last_otp).TotalMilliseconds > 100)) then
-          begin
-            writeln($'{ndone/total,8:P2}');
-            last_otp := curr_otp;
-          end;
-          done := ndone;
-        end;
-        
-        //Эта строчка удаляет все полученные компилятором сборки
-        System.AppDomain.Unload(ad);
-      except
-        on e: Exception do
-        begin
-          Writeln('Exception in async compile:');
-          Writeln(e);
-          if not System.Console.IsOutputRedirected then Readln;
-          Halt(-1);
-        end
+    .Select(
+      fname->
+      begin
+        total_files += 1;
+        Result := fname;
       end
-    ).Start;
+    )
+    .ToArray
+    .Batch(cib)
+    .ToArray;
+  
+  var done := 0;
+  var total := batches.Length;
+  writeln($'splited {total_files} files in {total} batches, ~{cib} files each');
+  var last_otp := System.DateTime.Now;
+  
+  BatchCompHelper.curr_test_id := 0;
+  
+  var enm := IEnumerator&<sequence of string>(IEnumerable&<sequence of string>(batches).GetEnumerator());//ToDo #1588
+  while enm.MoveNext do
+  begin
+    var batch := enm.Current;
+    
+    //Надо обязательно выполнять в отдельном домене
+    //Иначе не выйдет удалить сборки, которые создаёт компилятор
+    var ad := System.AppDomain.CreateDomain('TestRunner sub domain for compiling');
+    
+    ad.DoCallBack(get_bch(batch).Exec);
+    
+    done += 1;
+    var curr_otp := DateTime.Now;
+    if (done = total) or ((curr_otp-last_otp).TotalMilliseconds > 100) then
+    begin
+      writeln($'{done/total,8:P2}');
+      last_otp := curr_otp;
+    end;
+    
+    //Эта строчка удаляет все полученные компилятором сборки
+    System.AppDomain.Unload(ad);
   end;
-  
-  writeln($'got {total} batches');
-  init_done := true;
-  
-  while done < total do
-    Sleep(10);
   
 end;
 
-procedure CompileAll(path: string; cib: integer; with_dll: boolean; only32bit: boolean := false) :=
+procedure CompileAllStd(path: string; cib: integer; with_dll: boolean; only32bit: boolean := false) :=
 CompileInBatches(
   path, cib,
   batch->BatchCompHelper.GetStdCH(batch.ToArray, with_dll, only32bit)
@@ -252,15 +253,20 @@ end;
 
 {$region FileMoving}
 
-procedure CopyPCUFiles;
+procedure MovePCUFiles;
 begin
   System.Environment.CurrentDirectory := Path.GetDirectoryName(GetEXEFileName());
   var files := Directory.GetFiles(TestSuiteDir + PathSep + 'units', '*.pcu');
-  
+  writeln($'moving {files.Length} files');
+  PauseIsNonRedirect;
   foreach fname: string in files do
   begin
-    &File.Move(fname, TestSuiteDir + PathSep + 'usesunits' + PathSep + Path.GetFileName(fname));
+    var nfname := Concat(TestSuiteDir, PathSep, 'usesunits', PathSep, Path.GetFileName(fname));
+    System.IO.File.Delete(nfname);
+    &File.Move(fname, nfname);
   end;
+  writeln($'done moving files');
+  PauseIsNonRedirect;
 end;
 
 procedure ClearDirByPattern(dir, pattern: string);
@@ -308,7 +314,8 @@ end;
 {$region Misc}
 
 function TestCLParam(par: string): boolean :=
-(ParamCount = 0) or (ParamStr(1) = par);
+//(ParamCount = 0) or (ParamStr(1) = par);
+par = '3';//Debug
 
 function TSSF(dir: string) :=
 Concat(TestSuiteDir, PathSep, dir);
@@ -321,56 +328,85 @@ begin
     //readln;
     System.Environment.CurrentDirectory := TestSuiteDir;
     
-//    if TestCLParam('1') then
-//    begin
-//      Writeln(NewLine+'Compiling RunTests (main dir)');
-//      var LT := DateTime.Now;
-//      DeletePCUFiles;
-//      ClearExeDir;
-//      Writeln('Prepare done');
-//      CompileAll(TestSuiteDir, 5, false);
-//      Writeln($'Done in {DateTime.Now-LT}');
-//    end;
+    {$region CompRunTests}
+    if TestCLParam('1') then
+    begin
+      Writeln;
+      Writeln('Compiling RunTests (main dir)');
+      var LT := DateTime.Now;
+      DeletePCUFiles;
+      ClearExeDir;
+      Writeln('Prepare done');
+      CompileAllStd(TestSuiteDir, 30, false);
+      Writeln($'Done in {DateTime.Now-LT}');
+    end;
+    {$endregion CompRunTests}
     
+    {$region CompTests}
     if TestCLParam('2') then
     begin
-      Writeln(NewLine+'Compiling CompTests (CompilationSamples dir)');
+      Writeln;
+      Writeln('Compiling CompTests (CompilationSamples dir)');
       var LT := DateTime.Now;
       CopyLibFiles;
       Writeln('Prepare done');
-      CompileAll(TSSF('CompilationSamples'), 1, false);
+      CompileAllStd(TSSF('CompilationSamples'), 5, false);
       Writeln($'Done in {DateTime.Now-LT}');
     end;
+    {$endregion CompTests}
     
+    {$region Comp Tests with units}
     if TestCLParam('3') then
     begin
-      CompileAll(TSSF('units'), 5, false);
-      CopyPCUFiles;
-      CompileAll(TSSF('usesunits'), 5, false);
-      CompileAllErr(TSSF('errors'), 5, false);
-      writeln('Done with units and ErrTests');
+      Writeln;
+      Writeln('Compiling Tests with units in 2 steps:');
+      
+      Writeln('1. Compiling units');
+      CompileAllStd(TSSF('units'), 15, false);
+      
+      Writeln('1.5. Copying PCU');
+      MovePCUFiles;
+      
+      Writeln('2. Compiling uses-units');
+      CompileAllStd(TSSF('usesunits'), 15, false);
+      
+      Writeln('Done');
     end;
+    {$endregion Comp Tests with units}
     
+    {$region CompErrTests}
     if TestCLParam('4') then
+    begin
+      Writeln;
+      Writeln('Compiling error tests');
+      CompileAllErr(TSSF('errors'), 15, false);
+      Writeln('Done');
+    end;
+    {$endregion CompErrTests}
+    
+    {$region RunTests}
+    if TestCLParam('5') then
     begin
       RunAllTests(false);
       writeln('Tests run successfully');
       ClearExeDir;
       DeletePCUFiles;
     end;
+    {$endregion RunTests}
     
-    if TestCLParam('5') then
+    {$region ...}
+    if TestCLParam('6') then
     begin
       
-      CompileAll(TestSuiteDir, 5, true);
+      CompileAllStd(TestSuiteDir, 5, true);
       writeln('Tests with pabcrtl compiled successfully');
       
-      CompileAll(TSSF('pabcrtl_tests'), 5, true);
+      CompileAllStd(TSSF('pabcrtl_tests'), 5, true);
       RunAllTests(false);
       writeln('Tests with pabcrtl run successfully');
       ClearExeDir;
       
-      CompileAll(TestSuiteDir, 5, false,true);
+      CompileAllStd(TestSuiteDir, 5, false,true);
       writeln('Tests in 32bit mode compiled successfully');
       RunAllTests(false);
       writeln('Tests in 32bit run successfully');
@@ -386,15 +422,18 @@ begin
       writeln('Formatter tests run successfully');
       
     end;
+    {$endregion }
     
-    if not System.Console.IsOutputRedirected then Readln;
+    Writeln;
+    Writeln('Done testing');
+    PauseIsNonRedirect;
     
   except
     on e: Exception do
     begin
       Writeln('Exception in Main:');
       Writeln(e);
-      if not System.Console.IsOutputRedirected then Readln;
+      PauseIsNonRedirect;
       Halt(-1);
     end;
   end;
