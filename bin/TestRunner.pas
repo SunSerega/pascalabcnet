@@ -28,8 +28,10 @@ type
     with_dll, only32bit, with_ide, expect_error: boolean;
     batch: array of string;
     
+    static comp := new Compiler;
+    
     ///Обычная компиляция
-    static function GetStdMethod(batch: array of string; with_dll: boolean; only32bit: boolean := false): System.CrossAppDomainDelegate;
+    static function GetStdCH(batch: array of string; with_dll: boolean; only32bit: boolean): BatchCompHelper;
     begin
       var bch := new BatchCompHelper;
       bch.batch := batch;
@@ -40,11 +42,11 @@ type
       bch.with_ide := false;
       bch.expect_error := false;
       
-      Result := bch.Exec;
+      Result := bch;
     end;
     
     ///Компиляция, ожидающая ошибку
-    static function GetErrMethod(batch: array of string; with_ide: boolean): System.CrossAppDomainDelegate;
+    static function GetErrCH(batch: array of string; with_ide: boolean): BatchCompHelper;
     begin
       var bch := new BatchCompHelper;
       bch.batch := batch;
@@ -55,12 +57,12 @@ type
       bch.with_ide := with_ide;
       bch.expect_error := true;
       
-      Result := bch.Exec;
+      Result := bch;
     end;
     
     procedure Exec;
     begin
-      var comp := new Compiler();
+      //var comp := new Compiler();
       
       foreach var fname in batch do
       begin
@@ -117,48 +119,77 @@ type
     
   end;
 
-procedure CompileAll(path: string; with_dll: boolean; only32bit: boolean := false);
+procedure CompileInBatches(path: string; cib: integer; get_bch: IEnumerable<string> -> BatchCompHelper);
 begin
   
-  foreach var _batch in Directory.EnumerateFiles(path, '*.pas').Batch(30) do
+  var done := 0;
+  var done_lock := new object;
+  
+  var total := 0;
+  var last_otp := System.DateTime.Now;
+  var init_done := false;
+  
+  foreach var batch in
+    Directory
+    .EnumerateFiles(path, '*.pas')
+    .Batch(cib)
+  do
   begin
-    var batch := _batch.ToArray;
-    //Надо обязательно выполнять в отдельном домене
-    //Иначе не выйдет удалить сборки, которые создаёт компилятор
-    var ad := System.AppDomain.CreateDomain('TestRunner sub domain for compiling');
-    
-    ad.DoCallBack(
-      BatchCompHelper.GetStdMethod(
-        batch,
-        with_dll, only32bit
-      )
-    );
-    
-    //Эта строчка удаляет все полученные компилятором сборки
-    System.AppDomain.Unload(ad);
+    total += 1;
+    System.Threading.Tasks.Task.Create(
+      ()->
+      try
+        //Надо обязательно выполнять в отдельном домене
+        //Иначе не выйдет удалить сборки, которые создаёт компилятор
+        var ad := System.AppDomain.CreateDomain('TestRunner sub domain for compiling');
+        
+        ad.DoCallBack(get_bch(batch).Exec);
+        
+        lock done_lock do
+        begin
+          var ndone := done + 1;
+          var curr_otp := DateTime.Now;
+          if (ndone = total) or (init_done and ((curr_otp-last_otp).TotalMilliseconds > 100)) then
+          begin
+            writeln($'{ndone/total,8:P2}');
+            last_otp := curr_otp;
+          end;
+          done := ndone;
+        end;
+        
+        //Эта строчка удаляет все полученные компилятором сборки
+        System.AppDomain.Unload(ad);
+      except
+        on e: Exception do
+        begin
+          Writeln('Exception in async compile:');
+          Writeln(e);
+          if not System.Console.IsOutputRedirected then Readln;
+          Halt(-1);
+        end
+      end
+    ).Start;
   end;
+  
+  writeln($'got {total} batches');
+  init_done := true;
+  
+  while done < total do
+    Sleep(10);
   
 end;
 
-procedure CompileAllErr(path: string; with_ide: boolean);
-begin
-  
-  foreach var _batch in Directory.EnumerateFiles(path, '*.pas').Batch(30) do
-  begin
-    var batch := _batch.ToArray;
-    var ad := System.AppDomain.CreateDomain('TestRunner sub domain for compiling');
-    
-    ad.DoCallBack(
-      BatchCompHelper.GetErrMethod(
-        batch,
-        with_ide
-      )
-    );
-    
-    System.AppDomain.Unload(ad);
-  end;
-  
-end;
+procedure CompileAll(path: string; cib: integer; with_dll: boolean; only32bit: boolean := false) :=
+CompileInBatches(
+  path, cib,
+  batch->BatchCompHelper.GetStdCH(batch.ToArray, with_dll, only32bit)
+);
+
+procedure CompileAllErr(path: string; cib: integer; with_ide: boolean) :=
+CompileInBatches(
+  path, cib,
+  batch->BatchCompHelper.GetErrCH(batch.ToArray, with_ide)
+);
 
 {$endregion Compiling}
 
@@ -290,28 +321,33 @@ begin
     //readln;
     System.Environment.CurrentDirectory := TestSuiteDir;
     
-    if TestCLParam('1') then
-    begin
-      DeletePCUFiles;
-      ClearExeDir;
-      CompileAll(TestSuiteDir, false);
-      Writeln('Done compiling RunTests (main dir)');
-    end;
-    
+//    if TestCLParam('1') then
+//    begin
+//      Writeln(NewLine+'Compiling RunTests (main dir)');
+//      var LT := DateTime.Now;
+//      DeletePCUFiles;
+//      ClearExeDir;
+//      Writeln('Prepare done');
+//      CompileAll(TestSuiteDir, 5, false);
+//      Writeln($'Done in {DateTime.Now-LT}');
+//    end;
     
     if TestCLParam('2') then
     begin
+      Writeln(NewLine+'Compiling CompTests (CompilationSamples dir)');
+      var LT := DateTime.Now;
       CopyLibFiles;
-      CompileAll(TSSF('CompilationSamples'), false);
-      Writeln('Done compiling CompTests (CompilationSamples dir)');
+      Writeln('Prepare done');
+      CompileAll(TSSF('CompilationSamples'), 1, false);
+      Writeln($'Done in {DateTime.Now-LT}');
     end;
     
     if TestCLParam('3') then
     begin
-      CompileAll(TSSF('units'), false);
+      CompileAll(TSSF('units'), 5, false);
       CopyPCUFiles;
-      CompileAll(TSSF('usesunits'), false);
-      CompileAllErr(TSSF('errors'), false);
+      CompileAll(TSSF('usesunits'), 5, false);
+      CompileAllErr(TSSF('errors'), 5, false);
       writeln('Done with units and ErrTests');
     end;
     
@@ -326,15 +362,15 @@ begin
     if TestCLParam('5') then
     begin
       
-      CompileAll(TestSuiteDir, true);
+      CompileAll(TestSuiteDir, 5, true);
       writeln('Tests with pabcrtl compiled successfully');
       
-      CompileAll(TSSF('pabcrtl_tests'), true);
+      CompileAll(TSSF('pabcrtl_tests'), 5, true);
       RunAllTests(false);
       writeln('Tests with pabcrtl run successfully');
       ClearExeDir;
       
-      CompileAll(TestSuiteDir, false,true);
+      CompileAll(TestSuiteDir, 5, false,true);
       writeln('Tests in 32bit mode compiled successfully');
       RunAllTests(false);
       writeln('Tests in 32bit run successfully');
@@ -356,7 +392,7 @@ begin
   except
     on e: Exception do
     begin
-      Writeln('Exception:');
+      Writeln('Exception in Main:');
       Writeln(e);
       if not System.Console.IsOutputRedirected then Readln;
       Halt(-1);
