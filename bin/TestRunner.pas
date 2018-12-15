@@ -12,15 +12,51 @@
 
 uses PascalABCCompiler, System.IO, System.Diagnostics;
 
+{$region $define настройки}
+
+//Если раскомментировано - выполняет только выбранную группу тестов
+{$define SpecTestGroup}
+{$ifdef SpecTestGroup}
+  ///id тестовой группы те же самые, что и те, что можно вбить в командную строку
+  ///но SpecTestGroup перезаписывает аргументы командной строки
+  ///Так же id показывает при выполнении, к примеру, для тестовой группы "3":
+  ///3) Compiling Tests with units in 2 steps:
+  var SpecTestGroup := Arr&<string>('1', '5');
+  
+  //Если раскомментировано - выполняет только выбранный тест и группы выше
+  { $define SpecTest}
+  {$ifdef SpecTest}
+    ///id теста показывает когда в нём вылетает ошибка. Пишет:
+    ///"{ЧтоДелало} of "{имя файла}" in test #{id этого теста} {что именно пошло не так}"
+    ///К примеру:
+    ///Compilation of "D:\TestSuite\MyTestName.pas" in test #123 failed
+    var SpecTestId := 45;
+  {$endif SpecTest}
+  
+{$endif SpecTestGroup}
+
+//Если раскомментировано - ждёт нажатия Enter перед выходом. Включая и выход из за ошибки, и выход по завершению
+{$define NeedPause}
+
+{$endregion $define настройки}
+
 var
   PathSep := Path.DirectorySeparatorChar;
   IsNotWin := (System.Environment.OSVersion.Platform = System.PlatformID.Unix) or (System.Environment.OSVersion.Platform = System.PlatformID.MacOSX);
   
   TestSuiteDir := Concat(Path.GetDirectoryName(GetCurrentDir), PathSep, 'TestSuite');
   LibDir := Concat(GetCurrentDir, PathSep, 'Lib');
+  
+  curr_test_id: integer;
 
 procedure PauseIfNotRedirected :=
-if not System.Console.IsOutputRedirected then System.Console.ReadLine;
+{$ifdef NeedPause}
+  System.Console.ReadLine;
+{$else NeedPause}
+  exit;
+{$endif NeedPause}
+
+
 
 {$region Compiling}
 
@@ -33,9 +69,6 @@ type
     otp_dir: string;
     with_dll, only32bit, with_ide, expect_error: boolean;
     batch: array of string;
-    
-    static comp := new Compiler;
-    static curr_test_id: integer;
     
     ///Обычная компиляция
     static function GetStdCH(batch: array of string; otp_dir: string; with_dll: boolean; only32bit: boolean): BatchCompHelper;
@@ -69,11 +102,31 @@ type
     
     procedure Exec;
     begin
+      //var comp :=         Compiler(System.AppDomain.CurrentDomain.GetData('comp'));
+      var comp := new Compiler;//ToDo очень медленно, но чтоб передавать между доменами надо чтоб всё содержимое Compiler было сериализуемо
+      
+      var curr_test_id := integer(System.AppDomain.CurrentDomain.GetData('curr_test_id'));
       
       foreach var fname in batch do
       begin
         curr_test_id += 1;
-        if &File.ReadAllText(fname).Contains('//winonly') and IsNotWin then continue;
+        
+        {$ifdef SpecTest}
+          var SpecTestId := integer(System.AppDomain.CurrentDomain.GetData('SpecTestId'));
+          
+          if curr_test_id=SpecTestId then
+            System.Console.WriteLine($'Executing only Test #{SpecTestId},{NewLine}Which is: Compiling of file "{fname}"') else
+            continue;
+        {$endif SpecTest}
+        
+        if &File.ReadAllText(fname).Contains('//winonly') and IsNotWin then 
+          {$ifndef SpecTest}//Not
+            continue;
+          {$else}
+            if curr_test_id=SpecTestId then
+              System.Console.WriteLine($'Warning! Test #{SpecTestId} was only suited for Windows!') else
+              continue;
+          {$endif SpecTest}
         
         
         
@@ -98,7 +151,7 @@ type
           
           if comp.ErrorsList.Count = 0 then
           begin
-            System.Console.WriteLine($'Compilation of error sample {fname} in test #{curr_test_id} was successfull');
+            System.Console.WriteLine($'Compilation of error sample "{fname}" in test #{curr_test_id} was successfull');
             PauseIfNotRedirected;
             Halt(-1);
           end else
@@ -106,7 +159,7 @@ type
             //ToDo найти почему без "as object" не работает
             if err as object is Errors.CompilerInternalError then
             begin
-              System.Console.WriteLine($'Compilation of {fname} in test #{curr_test_id} failed with internal error{System.Environment.NewLine}{err}');
+              System.Console.WriteLine($'Compilation of "{fname}" in test #{curr_test_id} failed with internal error{NewLine}{err}');
               PauseIfNotRedirected;
               Halt(-1);
             end;
@@ -115,7 +168,7 @@ type
         if comp.ErrorsList.Count <> 0 then
         begin
           
-          System.Console.WriteLine($'Compilation of {fname} in test #{curr_test_id} failed{System.Environment.NewLine}{comp.ErrorsList[0]}');
+          System.Console.WriteLine($'Compilation of "{fname}" in test #{curr_test_id} failed{System.Environment.NewLine}{comp.ErrorsList[0]}');
           PauseIfNotRedirected;
           Halt(-1);
           
@@ -126,14 +179,22 @@ type
         comp.ErrorsList.Clear();
         comp.Warnings.Clear();
         
+        {$ifdef SpecTest}
+          System.Console.WriteLine($'SpecTest exection was successfull, done testing');
+          PauseIfNotRedirected;
+          Halt(0);
+        {$endif SpecTest}
+        
       end;
       
+      //System.AppDomain.CurrentDomain.SetData('curr_test_id', curr_test_id);
     end;
     
   end;
 
 procedure CompileInBatches(path: string; cib: integer; get_bch: IEnumerable<string> -> BatchCompHelper);
 begin
+  //var comp := new Compiler;
   
   var total_files := 0;
   var batches: array of sequence of string :=
@@ -155,8 +216,6 @@ begin
   writeln($'splitted {total_files} files in {total} batches, ~{cib} files each');
   var last_otp := System.DateTime.Now;
   
-  BatchCompHelper.curr_test_id := 0;
-  
   var enm := IEnumerator&<sequence of string>(IEnumerable&<sequence of string>(batches).GetEnumerator());//ToDo #1588
   while enm.MoveNext do
   begin
@@ -166,7 +225,17 @@ begin
     //Иначе не выйдет удалить сборки, которые создаёт компилятор
     var ad := System.AppDomain.CreateDomain('TestRunner sub domain for compiling');
     
+    //ad.SetData('comp', comp);
+    ad.SetData('curr_test_id', curr_test_id);
+    {$ifdef SpecTest}
+      ad.SetData('SpecTestId', SpecTestId);
+    {$endif SpecTest}
+        
+    
     ad.DoCallBack(get_bch(batch).Exec);
+    
+    //curr_test_id := integer(ad.GetData('curr_test_id'));
+    curr_test_id += cib;
     
     done += 1;
     var curr_otp := DateTime.Now;
@@ -257,131 +326,154 @@ end;
 
 {$endregion Runing}
 
-{$region FileMoving}
-
-procedure ClearDirByPattern(dir, pattern: string);
-begin
-  var files := Directory.GetFiles(dir, pattern);
-  for var i := 0 to files.Length - 1 do
-  begin
-    try
-      if Path.GetFileName(files[i]) <> '.gitignore' then
-        &File.Delete(files[i]);
-    except
-    end;
-  end;
-end;
-
-procedure ClearExeDir;
-begin
-  ClearDirByPattern(TestSuiteDir + PathSep + 'exe', '*.*');
-  ClearDirByPattern(TestSuiteDir + PathSep + 'CompilationSamples', '*.exe');
-  ClearDirByPattern(TestSuiteDir + PathSep + 'CompilationSamples', '*.mdb');
-  ClearDirByPattern(TestSuiteDir + PathSep + 'CompilationSamples', '*.pdb');
-  ClearDirByPattern(TestSuiteDir + PathSep + 'CompilationSamples', '*.pcu');
-  ClearDirByPattern(TestSuiteDir + PathSep + 'pabcrtl_tests', '*.exe');
-  ClearDirByPattern(TestSuiteDir + PathSep + 'pabcrtl_tests', '*.pdb');
-  ClearDirByPattern(TestSuiteDir + PathSep + 'pabcrtl_tests', '*.mdb');
-  ClearDirByPattern(TestSuiteDir + PathSep + 'pabcrtl_tests', '*.pcu');
-end;
-
-procedure DeletePCUFiles;
-begin
-  ClearDirByPattern(TestSuiteDir + PathSep + 'usesunits', '*.pcu');
-end;
-
-procedure CopyLibFiles;
-begin
-  var files := Directory.GetFiles(LibDir, '*.pas');
-  foreach f: string in files do
-  begin
-    &File.Copy(f, TestSuiteDir + PathSep + 'CompilationSamples' + PathSep + Path.GetFileName(f), true);
-  end;
-end;
-
-{$endregion FileMoving}
-
 {$region Misc}
 
 function TestCLParam(par: string): boolean :=
-//(ParamCount = 0) or (ParamStr(1) = par);
-par = '3';//Debug
+{$ifndef SpecTestGroup}//Not
+  (CommandLineArgs.Length = 0) or CommandLineArgs.Contains(par);
+{$else SpecTestGroup}
+  SpecTestGroup.Contains(par);
+{$endif SpecTestGroup}
 
 function TSSF(dir: string) :=
 Concat(TestSuiteDir, PathSep, dir);
 
 {$endregion Misc}
 
+{$region FileMoving/Deleting}
+
+procedure ClearDirByPattern(dir, pattern: string) :=
+foreach var fname in Directory.EnumerateFiles(dir, pattern) do
+  try
+    if Path.GetFileName(fname) <> '.gitignore' then
+      &File.Delete(fname);
+  except
+    on e: Exception do
+    begin
+      Writeln($'Warning: can''t delete {fname}:');
+      Writeln(e);
+    end;
+  end;
+
+procedure ClearExeDirs;
+begin
+  ClearDirByPattern(TSSF('exe'), '*.*');
+  ClearDirByPattern(TSSF('CompilationSamples'), '*.exe');
+  ClearDirByPattern(TSSF('CompilationSamples'), '*.mdb');
+  ClearDirByPattern(TSSF('CompilationSamples'), '*.pdb');
+  ClearDirByPattern(TSSF('CompilationSamples'), '*.pcu');
+  ClearDirByPattern(TSSF('pabcrtl_tests'), '*.exe');
+  ClearDirByPattern(TSSF('pabcrtl_tests'), '*.pdb');
+  ClearDirByPattern(TSSF('pabcrtl_tests'), '*.mdb');
+  ClearDirByPattern(TSSF('pabcrtl_tests'), '*.pcu');
+end;
+
+procedure DeletePCUFromUsesUnits :=
+ClearDirByPattern(TSSF('usesunits'), '*.pcu');
+
+procedure CopyLibFilesToTests :=
+foreach var fname in Directory.EnumerateFiles(LibDir, '*.pas') do
+  &File.Copy(fname, Concat( TSSF('CompilationSamples'), PathSep, Path.GetFileName(fname) ), true);
+
+{$endregion FileMoving/Deleting}
+
 begin
   try
+    
     System.Environment.CurrentDirectory := TestSuiteDir;
     
-    {$region CompRunTests}
+    if TestCLParam(#0) then
+      Writeln('Running all 6 tests') else
+      Writeln('Warning: Running not all tests');
+    
+    DeletePCUFromUsesUnits;
+    ClearExeDirs;
+    
+    {$region 1) CompRunTests}
     if TestCLParam('1') then
     begin
+      curr_test_id := 0;
       Writeln;
       Writeln('1) Compiling RunTests (main dir)');
       var LT := DateTime.Now;
-      DeletePCUFiles;
-      ClearExeDir;
+      
       Writeln('Prepare done');
+      
       CompileAllStd(TestSuiteDir, 30, false);
+      
       Writeln($'Done in {DateTime.Now-LT}');
     end;
-    {$endregion CompRunTests}
+    {$endregion 1) CompRunTests}
     
-    {$region CompTests}
+    {$region 2) CompTests}
     if TestCLParam('2') then
     begin
+      curr_test_id := 0;
       Writeln;
       Writeln('2) Compiling CompTests (CompilationSamples dir)');
       var LT := DateTime.Now;
-      CopyLibFiles;
+      
+      CopyLibFilesToTests;
       Writeln('Prepare done');
-      CompileAllStd(TSSF('CompilationSamples'), 5, false);
+      
+      CompileAllStd(TSSF('CompilationSamples'), 5, false, false, TSSF('CompilationSamples'));
+      
       Writeln($'Done in {DateTime.Now-LT}');
     end;
-    {$endregion CompTests}
+    {$endregion 2) CompTests}
     
-    {$region CompTests with units}
+    {$region 3) CompTests with units}
     if TestCLParam('3') then
     begin
-      System.Environment.CurrentDirectory := Concat(TestSuiteDir, PathSep, 'usesunits');
+      curr_test_id := 0;
       Writeln;
       Writeln('3) Compiling Tests with units in 2 steps:');
+      var LT := DateTime.Now;
       
       Writeln('1. Compiling units (TestSuite\units)');
-      CompileAllStd(TSSF('units'), 15, false, false, System.Environment.CurrentDirectory);
+      CompileAllStd(TSSF('units'), 15, false, false, TSSF('usesunits'));
       
       Writeln('2. Compiling uses-units (TestSuite\usesunits)');
       CompileAllStd(TSSF('usesunits'), 15, false);
       
-      Writeln('Done');
-      System.Environment.CurrentDirectory := TestSuiteDir;
+      DeletePCUFromUsesUnits;
+      Writeln($'Done in {DateTime.Now-LT}');
     end;
-    {$endregion CompTests with units}
+    {$endregion 3) CompTests with units}
     
-    {$region CompErrTests}
+    {$region 4) CompErrTests}
     if TestCLParam('4') then
     begin
+      curr_test_id := 0;
       Writeln;
       Writeln('4) Compiling error tests');
+      var LT := DateTime.Now;
+      
       CompileAllErr(TSSF('errors'), 15, false);
-      Writeln('Done');
+      
+      Writeln($'Done in {DateTime.Now-LT}');
     end;
-    {$endregion CompErrTests}
+    {$endregion 4) CompErrTests}
     
-    {$region RunTests}
+    {$region 5) RunTests}
     if TestCLParam('5') then
     begin
+      curr_test_id := 0;
+      Writeln;
+      Writeln('5) Runing tests');
+      var LT := DateTime.Now;
+      
       RunAllTests(false);
-      writeln('5) Tests run successfully');
-      ClearExeDir;
-      DeletePCUFiles;
+      
+      Writeln('Cleaning up');
+      ClearExeDirs;
+      DeletePCUFromUsesUnits;
+      
+      Writeln($'Done in {DateTime.Now-LT}');
     end;
-    {$endregion RunTests}
+    {$endregion 5) RunTests}
     
-    {$region ...}
+    {$region 6) }
     if TestCLParam('6') then
     begin
       
@@ -391,7 +483,7 @@ begin
       CompileAllStd(TSSF('pabcrtl_tests'), 5, true);
       RunAllTests(false);
       writeln('Tests with pabcrtl run successfully');
-      ClearExeDir;
+      ClearExeDirs;
       
       CompileAllStd(TestSuiteDir, 5, false,true);
       writeln('Tests in 32bit mode compiled successfully');
@@ -409,7 +501,10 @@ begin
       writeln('Formatter tests run successfully');
       
     end;
-    {$endregion }
+    {$endregion 6) }
+    
+    DeletePCUFromUsesUnits;
+    ClearExeDirs;
     
     Writeln;
     Writeln('Done testing');
