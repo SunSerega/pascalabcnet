@@ -36,6 +36,8 @@ ExecHide.exe gacutil.exe /i ..\bin\Lib\PABCRtl.dll
 cd ..\bin
 REM MPGORunner.exe
 TestRunner.exe
+@IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+
 cd ..
 GOTO EXIT
 
