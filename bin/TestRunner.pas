@@ -19,7 +19,7 @@ var
   TestSuiteDir := Concat(Path.GetDirectoryName(GetCurrentDir), PathSep, 'TestSuite');
   LibDir := Concat(GetCurrentDir, PathSep, 'Lib');
 
-procedure PauseIsNonRedirect :=
+procedure PauseIfNotRedirected :=
 if not System.Console.IsOutputRedirected then System.Console.ReadLine;
 
 {$region Compiling}
@@ -35,14 +35,14 @@ type
     batch: array of string;
     
     static comp := new Compiler;
-    static curr_test_id := 0;
+    static curr_test_id: integer;
     
     ///Обычная компиляция
-    static function GetStdCH(batch: array of string; with_dll: boolean; only32bit: boolean): BatchCompHelper;
+    static function GetStdCH(batch: array of string; otp_dir: string; with_dll: boolean; only32bit: boolean): BatchCompHelper;
     begin
       var bch := new BatchCompHelper;
       bch.batch := batch;
-      bch.otp_dir := Concat(TestSuiteDir, PathSep, 'exe');
+      bch.otp_dir := otp_dir;
       
       bch.with_dll := with_dll;
       bch.only32bit := only32bit;
@@ -53,11 +53,11 @@ type
     end;
     
     ///Компиляция, ожидающая ошибку
-    static function GetErrCH(batch: array of string; with_ide: boolean): BatchCompHelper;
+    static function GetErrCH(batch: array of string; otp_dir: string; with_ide: boolean): BatchCompHelper;
     begin
       var bch := new BatchCompHelper;
       bch.batch := batch;
-      bch.otp_dir := Concat(TestSuiteDir, PathSep, 'exe');
+      bch.otp_dir := otp_dir;
       
       bch.with_dll := true;
       bch.only32bit := true;
@@ -69,7 +69,6 @@ type
     
     procedure Exec;
     begin
-      //var comp := new Compiler();
       
       foreach var fname in batch do
       begin
@@ -78,7 +77,10 @@ type
         
         
         
-        var co: CompilerOptions := new CompilerOptions(fname, CompilerOptions.OutputType.ConsoleApplicaton);
+        var co: CompilerOptions := new CompilerOptions(
+          fname,
+          CompilerOptions.OutputType.ConsoleApplicaton
+        );
         co.Debug := true;
         co.OutputDirectory := otp_dir;
         
@@ -97,7 +99,7 @@ type
           if comp.ErrorsList.Count = 0 then
           begin
             System.Console.WriteLine($'Compilation of error sample {fname} in test #{curr_test_id} was successfull');
-            PauseIsNonRedirect;
+            PauseIfNotRedirected;
             Halt(-1);
           end else
           foreach var err in comp.ErrorsList do
@@ -105,7 +107,7 @@ type
             if err as object is Errors.CompilerInternalError then
             begin
               System.Console.WriteLine($'Compilation of {fname} in test #{curr_test_id} failed with internal error{System.Environment.NewLine}{err}');
-              PauseIsNonRedirect;
+              PauseIfNotRedirected;
               Halt(-1);
             end;
           
@@ -114,7 +116,7 @@ type
         begin
           
           System.Console.WriteLine($'Compilation of {fname} in test #{curr_test_id} failed{System.Environment.NewLine}{comp.ErrorsList[0]}');
-          PauseIsNonRedirect;
+          PauseIfNotRedirected;
           Halt(-1);
           
         end;
@@ -150,7 +152,7 @@ begin
   
   var done := 0;
   var total := batches.Length;
-  writeln($'splited {total_files} files in {total} batches, ~{cib} files each');
+  writeln($'splitted {total_files} files in {total} batches, ~{cib} files each');
   var last_otp := System.DateTime.Now;
   
   BatchCompHelper.curr_test_id := 0;
@@ -180,17 +182,21 @@ begin
   
 end;
 
+procedure CompileAllStd(path: string; cib: integer; with_dll: boolean; only32bit: boolean; otp_dir: string) :=
+CompileInBatches(
+  path, cib,
+  batch->BatchCompHelper.GetStdCH(batch.ToArray, otp_dir, with_dll, only32bit)
+);
 procedure CompileAllStd(path: string; cib: integer; with_dll: boolean; only32bit: boolean := false) :=
-CompileInBatches(
-  path, cib,
-  batch->BatchCompHelper.GetStdCH(batch.ToArray, with_dll, only32bit)
-);
+CompileAllStd(path, cib, with_dll, only32bit, Concat(TestSuiteDir, PathSep, 'exe'));
 
-procedure CompileAllErr(path: string; cib: integer; with_ide: boolean) :=
+procedure CompileAllErr(path: string; cib: integer; with_ide: boolean; otp_dir: string) :=
 CompileInBatches(
   path, cib,
-  batch->BatchCompHelper.GetErrCH(batch.ToArray, with_ide)
+  batch->BatchCompHelper.GetErrCH(batch.ToArray, otp_dir, with_ide)
 );
+procedure CompileAllErr(path: string; cib: integer; with_ide: boolean) :=
+CompileAllErr(path, cib, with_ide, Concat(TestSuiteDir, PathSep, 'exe'));
 
 {$endregion Compiling}
 
@@ -253,22 +259,6 @@ end;
 
 {$region FileMoving}
 
-procedure MovePCUFiles;
-begin
-  System.Environment.CurrentDirectory := Path.GetDirectoryName(GetEXEFileName());
-  var files := Directory.GetFiles(TestSuiteDir + PathSep + 'units', '*.pcu');
-  writeln($'moving {files.Length} files');
-  PauseIsNonRedirect;
-  foreach fname: string in files do
-  begin
-    var nfname := Concat(TestSuiteDir, PathSep, 'usesunits', PathSep, Path.GetFileName(fname));
-    System.IO.File.Delete(nfname);
-    &File.Move(fname, nfname);
-  end;
-  writeln($'done moving files');
-  PauseIsNonRedirect;
-end;
-
 procedure ClearDirByPattern(dir, pattern: string);
 begin
   var files := Directory.GetFiles(dir, pattern);
@@ -324,15 +314,13 @@ Concat(TestSuiteDir, PathSep, dir);
 
 begin
   try
-    
-    //readln;
     System.Environment.CurrentDirectory := TestSuiteDir;
     
     {$region CompRunTests}
     if TestCLParam('1') then
     begin
       Writeln;
-      Writeln('Compiling RunTests (main dir)');
+      Writeln('1) Compiling RunTests (main dir)');
       var LT := DateTime.Now;
       DeletePCUFiles;
       ClearExeDir;
@@ -346,7 +334,7 @@ begin
     if TestCLParam('2') then
     begin
       Writeln;
-      Writeln('Compiling CompTests (CompilationSamples dir)');
+      Writeln('2) Compiling CompTests (CompilationSamples dir)');
       var LT := DateTime.Now;
       CopyLibFiles;
       Writeln('Prepare done');
@@ -355,30 +343,29 @@ begin
     end;
     {$endregion CompTests}
     
-    {$region Comp Tests with units}
+    {$region CompTests with units}
     if TestCLParam('3') then
     begin
+      System.Environment.CurrentDirectory := Concat(TestSuiteDir, PathSep, 'usesunits');
       Writeln;
-      Writeln('Compiling Tests with units in 2 steps:');
+      Writeln('3) Compiling Tests with units in 2 steps:');
       
-      Writeln('1. Compiling units');
-      CompileAllStd(TSSF('units'), 15, false);
+      Writeln('1. Compiling units (TestSuite\units)');
+      CompileAllStd(TSSF('units'), 15, false, false, System.Environment.CurrentDirectory);
       
-      Writeln('1.5. Copying PCU');
-      MovePCUFiles;
-      
-      Writeln('2. Compiling uses-units');
+      Writeln('2. Compiling uses-units (TestSuite\usesunits)');
       CompileAllStd(TSSF('usesunits'), 15, false);
       
       Writeln('Done');
+      System.Environment.CurrentDirectory := TestSuiteDir;
     end;
-    {$endregion Comp Tests with units}
+    {$endregion CompTests with units}
     
     {$region CompErrTests}
     if TestCLParam('4') then
     begin
       Writeln;
-      Writeln('Compiling error tests');
+      Writeln('4) Compiling error tests');
       CompileAllErr(TSSF('errors'), 15, false);
       Writeln('Done');
     end;
@@ -388,7 +375,7 @@ begin
     if TestCLParam('5') then
     begin
       RunAllTests(false);
-      writeln('Tests run successfully');
+      writeln('5) Tests run successfully');
       ClearExeDir;
       DeletePCUFiles;
     end;
@@ -426,14 +413,14 @@ begin
     
     Writeln;
     Writeln('Done testing');
-    PauseIsNonRedirect;
+    PauseIfNotRedirected;
     
   except
     on e: Exception do
     begin
       Writeln('Exception in Main:');
       Writeln(e);
-      PauseIsNonRedirect;
+      PauseIfNotRedirected;
       Halt(-1);
     end;
   end;
