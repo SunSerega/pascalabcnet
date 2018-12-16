@@ -40,6 +40,8 @@ uses PascalABCCompiler, System.IO, System.Diagnostics;
 
 {$endregion $define настройки}
 
+{$region Misc}
+
 var
   PathSep := Path.DirectorySeparatorChar;
   IsNotWin := (System.Environment.OSVersion.Platform = System.PlatformID.Unix) or (System.Environment.OSVersion.Platform = System.PlatformID.MacOSX);
@@ -49,14 +51,44 @@ var
   
   curr_test_id: integer;
 
-procedure PauseIfNotRedirected :=
+procedure PauseIfNeeded :=
 {$ifdef NeedPause}
   System.Console.ReadLine;
 {$else NeedPause}
   exit;
 {$endif NeedPause}
 
+function IsTestGroupActive(par: string): boolean :=
+{$ifndef SpecTestGroup}//Not
+  (CommandLineArgs.Length = 0) or CommandLineArgs.Contains(par);
+{$else SpecTestGroup}
+  SpecTestGroup.Contains(par);
+{$endif SpecTestGroup}
 
+///Возвращает полное имя данной подпапки, находящейся в папке "TestSuite"
+function TSSF(dir: string) :=
+Concat(TestSuiteDir, PathSep, dir);
+
+procedure WritePstDone(ST: DateTime; var LT: DateTime; pst: real; min_milliseconds: real := 300);
+begin
+  var CT := DateTime.Now;
+  if (pst < 0.999) and ((CT-LT).TotalMilliseconds < min_milliseconds) then exit;
+  
+  var left := System.TimeSpan.MaxValue;
+  try
+    var spend := CT-ST;
+    left := new System.TimeSpan(
+      System.Convert.ToInt64(
+        spend.Ticks/pst
+      )
+    ) - spend;
+  except end;
+  
+  writeln($'{pst,8:P2} | time left: {left} | ready at {CT+left:T}');
+  LT := CT;
+end;
+
+{$endregion Misc}
 
 {$region Compiling}
 
@@ -152,7 +184,7 @@ type
           if comp.ErrorsList.Count = 0 then
           begin
             System.Console.WriteLine($'Compilation of error sample "{fname}" in test #{curr_test_id} was successfull');
-            PauseIfNotRedirected;
+            PauseIfNeeded;
             Halt(-1);
           end else
           foreach var err in comp.ErrorsList do
@@ -160,7 +192,7 @@ type
             if err as object is Errors.CompilerInternalError then
             begin
               System.Console.WriteLine($'Compilation of "{fname}" in test #{curr_test_id} failed with internal error{NewLine}{err}');
-              PauseIfNotRedirected;
+              PauseIfNeeded;
               Halt(-1);
             end;
           
@@ -169,7 +201,7 @@ type
         begin
           
           System.Console.WriteLine($'Compilation of "{fname}" in test #{curr_test_id} failed{System.Environment.NewLine}{comp.ErrorsList[0]}');
-          PauseIfNotRedirected;
+          PauseIfNeeded;
           Halt(-1);
           
         end;
@@ -214,7 +246,10 @@ begin
   var done := 0;
   var total := batches.Length;
   writeln($'splitted {total_files} files in {total} batches, ~{cib} files each');
-  var last_otp := System.DateTime.Now;
+  
+  
+  var ST := DateTime.Now;
+  var last_otp := DateTime.Now;
   
   var enm := IEnumerator&<sequence of string>(IEnumerable&<sequence of string>(batches).GetEnumerator());//ToDo #1588
   while enm.MoveNext do
@@ -238,12 +273,7 @@ begin
     curr_test_id += cib;
     
     done += 1;
-    var curr_otp := DateTime.Now;
-    if (done = total) or ((curr_otp-last_otp).TotalMilliseconds > 100) then
-    begin
-      writeln($'{done/total,8:P2}');
-      last_otp := curr_otp;
-    end;
+    WritePstDone(ST, last_otp, done/total);
     
     //Эта строчка удаляет все полученные компилятором сборки
     System.AppDomain.Unload(ad);
@@ -274,31 +304,52 @@ CompileAllErr(path, cib, with_ide, Concat(TestSuiteDir, PathSep, 'exe'));
 procedure RunAllTests(redirectIO: boolean);
 begin
   var files := Directory.GetFiles(TestSuiteDir + PathSep + 'exe', '*.exe');
-  for var i := 0 to files.Length - 1 do
+  
+  var ST := DateTime.Now;
+  var last_otp := DateTime.Now;
+  var done := 0;
+  foreach var fname in files do
   begin
-    var psi := new System.Diagnostics.ProcessStartInfo(files[i]);
+    curr_test_id += 1;
+    
+    var psi := new ProcessStartInfo(fname);
     psi.CreateNoWindow := true;
     psi.UseShellExecute := false;
-    
-    psi.WorkingDirectory := TestSuiteDir + PathSep + 'exe';
-		  {psi.RedirectStandardInput := true;
+    psi.WorkingDirectory := TSSF('exe');
+    if redirectIO then
+    begin
+		  psi.RedirectStandardInput := true;
 		  psi.RedirectStandardOutput := true;
-		  psi.RedirectStandardError := true;}
-    var p: Process := new Process();
-    p.StartInfo := psi;
-    p.Start();
+		  psi.RedirectStandardError := true;
+    end;
+    
+		var p := Process.Start(psi);
+		
     if redirectIO then
       p.StandardInput.WriteLine('GO');
-		  //p.StandardInput.AutoFlush := true;
-		  //var p := System.Diagnostics.Process.Start(psi);
     
-    while not p.HasExited do
-      Sleep(10);
+    p.WaitForExit(3000);
     if p.ExitCode <> 0 then
     begin
-      System.Windows.Forms.MessageBox.Show('Running of ' + files[i] + ' failed. Exit code is not 0');
-      Halt;
+      Writeln($'Runing of "{fname}" in test #{curr_test_id} failed, exit code is {p.ExitCode}');
+      PauseIfNeeded;
+      Halt(-1);
     end;
+    
+    if redirectIO then
+    begin
+      var otp := p.StandardOutput.ReadToEnd;
+      if otp<>'' then
+      begin
+        writeln($'Reading output of "{fname}" in test #{curr_test_id} wasn''t empty. It was:');
+        writeln(otp);
+        writeln($'--- End output of test #{curr_test_id} ---');
+      end;
+    end;
+    
+    done += 1;
+    WritePstDone(ST, last_otp, done/files.Length);
+    
   end;
 end;
 
@@ -325,20 +376,6 @@ begin
 end;
 
 {$endregion Runing}
-
-{$region Misc}
-
-function TestCLParam(par: string): boolean :=
-{$ifndef SpecTestGroup}//Not
-  (CommandLineArgs.Length = 0) or CommandLineArgs.Contains(par);
-{$else SpecTestGroup}
-  SpecTestGroup.Contains(par);
-{$endif SpecTestGroup}
-
-function TSSF(dir: string) :=
-Concat(TestSuiteDir, PathSep, dir);
-
-{$endregion Misc}
 
 {$region FileMoving/Deleting}
 
@@ -382,15 +419,22 @@ begin
     
     System.Environment.CurrentDirectory := TestSuiteDir;
     
-    if TestCLParam(#0) then
+    if IsTestGroupActive(#0) then
       Writeln('Running all 6 tests') else
+    begin
       Writeln('Warning: Running not all tests');
+      {$ifdef SpecTestGroup}
+        Writeln($'Running only test groups: {SpecTestGroup.JoinIntoString('', '')}');
+      {$else SpecTestGroup}
+        Writeln($'Running only test groups: {CommandLineArgs.JoinIntoString('', '')}');
+      {$endif SpecTestGroup}
+    end;
     
-    DeletePCUFromUsesUnits;
+    var ST := DateTime.Now;
     ClearExeDirs;
     
     {$region 1) CompRunTests}
-    if TestCLParam('1') then
+    if IsTestGroupActive('1') then
     begin
       curr_test_id := 0;
       Writeln;
@@ -406,7 +450,7 @@ begin
     {$endregion 1) CompRunTests}
     
     {$region 2) CompTests}
-    if TestCLParam('2') then
+    if IsTestGroupActive('2') then
     begin
       curr_test_id := 0;
       Writeln;
@@ -423,12 +467,14 @@ begin
     {$endregion 2) CompTests}
     
     {$region 3) CompTests with units}
-    if TestCLParam('3') then
+    if IsTestGroupActive('3') then
     begin
       curr_test_id := 0;
       Writeln;
       Writeln('3) Compiling Tests with units in 2 steps:');
       var LT := DateTime.Now;
+      
+      DeletePCUFromUsesUnits;
       
       Writeln('1. Compiling units (TestSuite\units)');
       CompileAllStd(TSSF('units'), 15, false, false, TSSF('usesunits'));
@@ -442,7 +488,7 @@ begin
     {$endregion 3) CompTests with units}
     
     {$region 4) CompErrTests}
-    if TestCLParam('4') then
+    if IsTestGroupActive('4') then
     begin
       curr_test_id := 0;
       Writeln;
@@ -456,7 +502,7 @@ begin
     {$endregion 4) CompErrTests}
     
     {$region 5) RunTests}
-    if TestCLParam('5') then
+    if IsTestGroupActive('5') then
     begin
       curr_test_id := 0;
       Writeln;
@@ -474,7 +520,7 @@ begin
     {$endregion 5) RunTests}
     
     {$region 6) }
-    if TestCLParam('6') then
+    if IsTestGroupActive('6') then
     begin
       
       CompileAllStd(TestSuiteDir, 5, true);
@@ -503,19 +549,18 @@ begin
     end;
     {$endregion 6) }
     
-    DeletePCUFromUsesUnits;
     ClearExeDirs;
     
     Writeln;
-    Writeln('Done testing');
-    PauseIfNotRedirected;
+    Writeln($'Done testing in {DateTime.Now-ST}');
+    PauseIfNeeded;
     
   except
     on e: Exception do
     begin
       Writeln('Exception in Main:');
       Writeln(e);
-      PauseIfNotRedirected;
+      PauseIfNeeded;
       Halt(-1);
     end;
   end;
