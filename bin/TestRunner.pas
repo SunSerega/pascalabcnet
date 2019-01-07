@@ -7,8 +7,7 @@
 {$reference Localization.dll}
 {$reference System.Windows.Forms.dll}
 
-//ToDo issue компилятора заставляющие делать костыли:
-// - #1588
+//ToDo 7+)
 
 uses PascalABCCompiler, System.IO, System.Diagnostics;
 
@@ -21,7 +20,7 @@ uses PascalABCCompiler, System.IO, System.Diagnostics;
   ///но SpecTestGroup перезаписывает аргументы командной строки
   ///Так же id показывает при выполнении, к примеру, для тестовой группы "3":
   ///3) Compiling Tests with units in 2 steps:
-  var SpecTestGroup := Arr&<string>('1', '5');
+  var SpecTestGroups := Arr&<string>('6');
   
   //Если раскомментировано - выполняет только выбранный тест и группы выше
   { $define SpecTest}
@@ -62,7 +61,7 @@ function IsTestGroupActive(par: string): boolean :=
 {$ifndef SpecTestGroup}//Not
   (CommandLineArgs.Length = 0) or CommandLineArgs.Contains(par);
 {$else SpecTestGroup}
-  SpecTestGroup.Contains(par);
+  SpecTestGroups.Contains(par);
 {$endif SpecTestGroup}
 
 ///Возвращает полное имя данной подпапки, находящейся в папке "TestSuite"
@@ -229,7 +228,7 @@ begin
   //var comp := new Compiler;
   
   var total_files := 0;
-  var batches: array of sequence of string :=
+  var batches: sequence of sequence of string :=
     Directory
     .EnumerateFiles(path, '*.pas')
     .Select(
@@ -240,27 +239,22 @@ begin
       end
     )
     .ToArray
-    .Batch(cib)
-    .ToArray;
+    .Batch(cib);
   
-  var done := 0;
-  var total := batches.Length;
-  writeln($'splitted {total_files} files in {total} batches, ~{cib} files each');
+  writeln($'splitted {total_files} files in { (total_files-1) div cib + 1} batches, ~{cib} files each');
   
   
   var ST := DateTime.Now;
   var last_otp := DateTime.Now;
   
-  var enm := IEnumerator&<sequence of string>(IEnumerable&<sequence of string>(batches).GetEnumerator());//ToDo #1588
-  while enm.MoveNext do
+  foreach var batch in batches do
   begin
-    var batch := enm.Current;
     
     //Надо обязательно выполнять в отдельном домене
     //Иначе не выйдет удалить сборки, которые создаёт компилятор
     var ad := System.AppDomain.CreateDomain('TestRunner sub domain for compiling');
     
-    //ad.SetData('comp', comp);
+    //ad.SetData('comp', comp);//Не получается. Это было бы на много быстрее, но компилятор не умеет сериализовываться
     ad.SetData('curr_test_id', curr_test_id);
     {$ifdef SpecTest}
       ad.SetData('SpecTestId', SpecTestId);
@@ -270,10 +264,9 @@ begin
     ad.DoCallBack(get_bch(batch).Exec);
     
     //curr_test_id := integer(ad.GetData('curr_test_id'));
-    curr_test_id += cib;
+    curr_test_id += batch.Count;
     
-    done += 1;
-    WritePstDone(ST, last_otp, done/total);
+    WritePstDone(ST, last_otp, curr_test_id/total_files);
     
     //Эта строчка удаляет все полученные компилятором сборки
     System.AppDomain.Unload(ad);
@@ -424,7 +417,7 @@ begin
     begin
       Writeln('Warning: Running not all tests');
       {$ifdef SpecTestGroup}
-        Writeln($'Running only test groups: {SpecTestGroup.JoinIntoString('', '')}');
+        Writeln($'Running only test groups: {SpecTestGroups.JoinIntoString('', '')}');
       {$else SpecTestGroup}
         Writeln($'Running only test groups: {CommandLineArgs.JoinIntoString('', '')}');
       {$endif SpecTestGroup}
@@ -433,7 +426,7 @@ begin
     var ST := DateTime.Now;
     ClearExeDirs;
     
-    {$region 1) CompRunTests}
+    {$region 1) CompRunTests }
     if IsTestGroupActive('1') then
     begin
       curr_test_id := 0;
@@ -449,7 +442,7 @@ begin
     end;
     {$endregion 1) CompRunTests}
     
-    {$region 2) CompTests}
+    {$region 2) CompTests }
     if IsTestGroupActive('2') then
     begin
       curr_test_id := 0;
@@ -466,15 +459,15 @@ begin
     end;
     {$endregion 2) CompTests}
     
-    {$region 3) CompTests with units}
+    {$region 3) CompTests with units }
     if IsTestGroupActive('3') then
     begin
       curr_test_id := 0;
       Writeln;
       Writeln('3) Compiling Tests with units in 2 steps:');
-      var LT := DateTime.Now;
-      
       DeletePCUFromUsesUnits;
+      System.Environment.CurrentDirectory := TSSF('usesunits');
+      var LT := DateTime.Now;
       
       Writeln('1. Compiling units (TestSuite\units)');
       CompileAllStd(TSSF('units'), 15, false, false, TSSF('usesunits'));
@@ -484,10 +477,11 @@ begin
       
       DeletePCUFromUsesUnits;
       Writeln($'Done in {DateTime.Now-LT}');
+      System.Environment.CurrentDirectory := TestSuiteDir;
     end;
     {$endregion 3) CompTests with units}
     
-    {$region 4) CompErrTests}
+    {$region 4) CompErrTests }
     if IsTestGroupActive('4') then
     begin
       curr_test_id := 0;
@@ -501,7 +495,7 @@ begin
     end;
     {$endregion 4) CompErrTests}
     
-    {$region 5) RunTests}
+    {$region 5) RunTests }
     if IsTestGroupActive('5') then
     begin
       curr_test_id := 0;
@@ -519,17 +513,34 @@ begin
     end;
     {$endregion 5) RunTests}
     
-    {$region 6) }
+    {$region 6) PABCRtlTests }
     if IsTestGroupActive('6') then
     begin
-      
-      CompileAllStd(TestSuiteDir, 5, true);
-      writeln('Tests with pabcrtl compiled successfully');
-      
-      CompileAllStd(TSSF('pabcrtl_tests'), 5, true);
-      RunAllTests(false);
-      writeln('Tests with pabcrtl run successfully');
       ClearExeDirs;
+      curr_test_id := 0;
+      Writeln;
+      Writeln('6) PABCRtlTests in 2 steps:');
+      var LT := DateTime.Now;
+      
+      Writeln('1. Compiling PABCRtlTests');
+      CompileAllStd(TSSF('pabcrtl_tests'), 5, true);
+      
+      Writeln('2. Running PABCRtlTests');
+      RunAllTests(false);
+      
+      ClearExeDirs;
+      Writeln($'Done in {DateTime.Now-LT}');
+    end;
+    {$endregion 6) PABCRtlTests}
+    
+    {$region 7) }
+    if IsTestGroupActive('7') then
+    begin
+      ClearExeDirs;
+      curr_test_id := 0;
+      Writeln;
+      Writeln('7) ');
+      var LT := DateTime.Now;
       
       CompileAllStd(TestSuiteDir, 5, false,true);
       writeln('Tests in 32bit mode compiled successfully');
@@ -547,11 +558,14 @@ begin
       writeln('Formatter tests run successfully');
       
     end;
-    {$endregion 6) }
-    
-    ClearExeDirs;
+    {$endregion }
     
     Writeln;
+    
+    Writeln($'Making sure everything is cleaned up');
+    DeletePCUFromUsesUnits;
+    ClearExeDirs;
+    
     Writeln($'Done testing in {DateTime.Now-ST}');
     PauseIfNeeded;
     
