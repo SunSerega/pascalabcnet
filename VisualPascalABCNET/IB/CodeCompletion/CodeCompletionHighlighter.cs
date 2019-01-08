@@ -171,7 +171,7 @@ namespace VisualPascalABC
                 c = textArea.Document.TextContent[off];
             }
             c = char.ToLower(c);
-            if (c != '=' && c != 't' && c != 'd' && c != 'o' && c != '{')
+            if (c != '=' && c != 't' && c != 'd' && c != 'o' && c != '{' && c != 'c')
             {
                 return true;
             }
@@ -245,7 +245,7 @@ namespace VisualPascalABC
             while (end_off < text.Length)
             {
                 char c = text[end_off];
-                if (char.IsLetterOrDigit(c) || c == '_' || c == '&')
+                if (char.IsLetterOrDigit(c) || c == '_' || c == '&' || c == '.')
                 {
                     sb.Append(c);
                 }
@@ -298,6 +298,10 @@ namespace VisualPascalABC
             {
                 return new TmpPos(end_off - 3, 3);
             }
+            else if (string.Compare(sb.ToString(), "end.", true) == 0 && beg_stack.Count > 0)
+            {
+                return new TmpPos(end_off - 4, 3);
+            }
             return null;
         }
 
@@ -314,7 +318,7 @@ namespace VisualPascalABC
             while (beg_off >= 0)
             {
                 char c = text[beg_off];
-                if (char.IsLetterOrDigit(c) || c == '_' || c == '&')
+                if (char.IsLetterOrDigit(c) || c == '_' || c == '&' || c == '.')
                 {
                     sb.Insert(0, c);
                 }
@@ -458,7 +462,7 @@ namespace VisualPascalABC
                 end_off = -1;
                 return "";
             }
-            if (off >= 1 && (off >= text.Length || !(char.IsLetterOrDigit(text[off]) || text[off] == '&' || text[off] == '_')) && (char.IsLetterOrDigit(text[off - 1]) || text[off - 1] == '&' || text[off - 1] == '_'))
+            if (off >= 1 && (off >= text.Length || !(char.IsLetterOrDigit(text[off]) || text[off] == '&' || text[off] == '_' || text[off] == '.')) && (char.IsLetterOrDigit(text[off - 1]) || text[off - 1] == '&' || text[off - 1] == '_' || text[off - 1] == '.'))
                 off--;
             if (off < 0 || !(char.IsLetterOrDigit(text[off]) || text[off] == '&' || text[off] == '_'))
             {
@@ -466,7 +470,7 @@ namespace VisualPascalABC
                 end_off = -1;
                 return "";
             }
-            while (off >= 0 && off < text.Length && (char.IsLetterOrDigit(text[off]) || text[off] == '&' || text[off] == '_'))
+            while (off >= 0 && off < text.Length && (char.IsLetterOrDigit(text[off]) || text[off] == '&' || text[off] == '_' || text[off] == '.'))
             {
                 off--;
             }
