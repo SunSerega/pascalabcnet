@@ -2904,6 +2904,7 @@ namespace PascalABCCompiler
         {
             string SourceText = GetSourceFileText(FileName);
             List<string> DefinesList = new List<string>();
+            DefinesList.Add("PASCALABC"); // SSM 11/07/20
             if (!compilerOptions.Debug && !compilerOptions.ForDebugging)
                 DefinesList.Add("RELEASE");
             else
@@ -3197,6 +3198,7 @@ namespace PascalABCCompiler
                     else
                         throw new UnitNotFound(CurrentCompilationUnit.SyntaxTree.file_name, UnitName, SyntaxUsesUnit.source_context);
                 List<string> DefinesList = new List<string>();
+                DefinesList.Add("PASCALABC");
                 if (!compilerOptions.Debug && !compilerOptions.ForDebugging)
                     DefinesList.Add("RELEASE");
                 else

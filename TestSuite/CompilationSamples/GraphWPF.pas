@@ -208,6 +208,8 @@ type
     property Width: real read GetWidth;
     /// Высота графического окна
     property Height: real read GetHeight;
+    /// Клиентский прямоугольник графического окна
+    function ClientRect: GRect;
     /// Центр графического окна
     function Center: Point;
     /// Сохраняет содержимое графического окна в файл с именем fname
@@ -1670,6 +1672,8 @@ end;
 
 function GraphWindowType.Center: Point := Pnt(Width/2,Height/2);
 
+function GraphWindowType.ClientRect: GRect := Rect(0,0,Width,Height);
+
 
 procedure WindowTypeWPF.Save(fname: string) := GraphWindow.Save(fname);
 
@@ -1927,6 +1931,7 @@ public
   begin
     host1 := new Canvas;
     host := new MyVisualHost();
+    host1.ClipToBounds := True;
     host1.SizeChanged += (s,e) ->
     begin
       var sz := e.NewSize;
