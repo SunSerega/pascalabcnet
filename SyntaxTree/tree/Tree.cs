@@ -54041,7 +54041,7 @@ namespace PascalABCCompiler.SyntaxTree
 	///
 	///</summary>
 	[Serializable]
-	public partial class array_const_new : expression
+	public partial class array_const_new : addressed_value
 	{
 
 		///<summary>
