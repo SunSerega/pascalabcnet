@@ -164,8 +164,8 @@ using System.Reflection;
 //using SyntaxTreeChanger;
 using PascalABCCompiler.SyntaxTreeConverters;
 using System.Text;
+using PascalABCCompiler.TreeRealization;
 using System.Linq;
-
 namespace PascalABCCompiler
 {
     public class CompilerCompilationError : LocatedError
@@ -408,8 +408,10 @@ namespace PascalABCCompiler
 
 		//private SemanticTree.compilation_unitArrayList _interfaceUsedUnits=new SemanticTree.compilation_unitArrayList();
 
+        public Dictionary<unit_node, CompilationUnit> DirectInterfaceCompilationUnits { get; } = new Dictionary<unit_node, CompilationUnit>();
         public PascalABCCompiler.TreeRealization.unit_node_list InterfaceUsedUnits { get; } = new PascalABCCompiler.TreeRealization.unit_node_list();
 
+        public Dictionary<unit_node, CompilationUnit> DirectImplementationCompilationUnits { get; } = new Dictionary<unit_node, CompilationUnit>();
         public PascalABCCompiler.TreeRealization.unit_node_list ImplementationUsedUnits { get; } = new PascalABCCompiler.TreeRealization.unit_node_list();
 
         private SyntaxTree.compilation_unit _syntaxTree=null;
@@ -869,7 +871,7 @@ namespace PascalABCCompiler
             supportedProjectFilesList.Add(new SupportedSourceFile(new string[1]{".pabcproj"},"PascalABC.NET"));
             supportedProjectFiles = supportedProjectFilesList.ToArray();
         }
-        
+
         private SupportedSourceFile[] supportedSourceFiles = null;
         public SupportedSourceFile[] SupportedSourceFiles
         {
@@ -923,7 +925,6 @@ namespace PascalABCCompiler
         public SyntaxTree.unit_or_namespace CurrentSyntaxUnit;
 		private List<CompilationUnit> UnitsToCompile = new List<CompilationUnit>();
         public Hashtable RecompileList = new Hashtable(StringComparer.OrdinalIgnoreCase);
-        private PascalABCCompiler.TreeRealization.unit_node_list Units;
         private Hashtable CycleUnits = new Hashtable();
         public CompilationUnit CurrentCompilationUnit = null;
         private CompilationUnit FirstCompilationUnit = null;
@@ -1817,10 +1818,12 @@ namespace PascalABCCompiler
                 {
                 	PrepareCompileOptionsForProject();
                 }
-                Units = new PascalABCCompiler.TreeRealization.unit_node_list();
                 CurrentSyntaxUnit = new SyntaxTree.uses_unit_in(null, new SyntaxTree.string_const(Path.GetFullPath(CompilerOptions.SourceFileName)));
                 
-                CompileUnit(Units, CurrentSyntaxUnit, null);
+                CompileUnit(
+                    new PascalABCCompiler.TreeRealization.unit_node_list(),
+                    new Dictionary<unit_node, CompilationUnit>(),
+                    CurrentSyntaxUnit, null);
                 
                 //Console.WriteLine(timer.ElapsedMilliseconds / 1000.0);  //////
                 foreach (CompilationUnit CurrentUnit in UnitsToCompile)
@@ -1845,11 +1848,11 @@ namespace PascalABCCompiler
                             for (int i = SyntaxUsesList.Count - 1; i >= 0; i--)
                                 if (!IsPossibleNamespace(SyntaxUsesList[i], true, Path.GetDirectoryName(UnitName)))
                                 {
-                                    CompileUnit(CurrentUnit.ImplementationUsedUnits, SyntaxUsesList[i], Path.GetDirectoryName(UnitName));
+                                    CompileUnit(CurrentUnit.ImplementationUsedUnits, CurrentUnit.DirectImplementationCompilationUnits, SyntaxUsesList[i], Path.GetDirectoryName(UnitName));
                                 }
                                 else
                                 {
-                                    CurrentUnit.ImplementationUsedUnits.AddElement(new TreeRealization.namespace_unit_node(GetNamespace(SyntaxUsesList[i])));
+                                    CurrentUnit.ImplementationUsedUnits.AddElement(new TreeRealization.namespace_unit_node(GetNamespace(SyntaxUsesList[i])), null);
                                     CurrentUnit.PossibleNamespaces.Add(SyntaxUsesList[i]);
                                 }
                         }
@@ -2530,6 +2533,42 @@ namespace PascalABCCompiler
             return Path.Combine(dir, path.Substring(i));
         }
 
+        public static string GetUnitPath(CompilationUnit u1, CompilationUnit u2)
+        {
+            if (u1 == null) throw new ArgumentException(nameof(u1));
+            if (u2 == null) throw new ArgumentException(nameof(u2));
+
+            if (u1.DirectInterfaceCompilationUnits      .Values.Contains(u2)) return u1.InterfaceUsedUnits      .unit_uses_paths[u2.SemanticTree];
+            if (u1.DirectImplementationCompilationUnits .Values.Contains(u2)) return u1.ImplementationUsedUnits .unit_uses_paths[u2.SemanticTree];
+
+            var last = new Dictionary<CompilationUnit, string>();
+            var done = new HashSet<CompilationUnit>();
+
+            foreach (var u in u1.DirectInterfaceCompilationUnits.Values.Concat(u1.DirectImplementationCompilationUnits.Values))
+            {
+                last.Add(u, u1.InterfaceUsedUnits.unit_uses_paths[u.SemanticTree]);
+                done.Add(u);
+            }
+
+            while (last.Count != 0)
+            {
+                var next = new Dictionary<CompilationUnit, string>();
+
+                foreach (var u in last.Keys)
+                    foreach (var used_u in u.DirectInterfaceCompilationUnits.Values.Concat(u.DirectImplementationCompilationUnits.Values))
+                    {
+                        if (!done.Add(used_u)) continue;
+                        var path = CombinePath(Path.GetDirectoryName(last[u]), u.InterfaceUsedUnits.unit_uses_paths[used_u.SemanticTree]);
+                        if (used_u == u2) return path;
+                        next.Add(used_u, path);
+                    }
+
+                last = next;
+            }
+
+            throw new InvalidOperationException($"Could not find path to \"{u2.UnitName}\" relative to \"{u1.UnitName}\"");
+        }
+
         private string FindFileInDirs(string FileName, params string[] Dirs)
         {
             foreach (string Dir in Dirs)
@@ -2764,7 +2803,7 @@ namespace PascalABCCompiler
             if (UnitTable.Count == 0) throw new ProgramModuleExpected(UnitName, null);
             if ((CurrentUnit = ReadDLL(UnitName)) != null)
             {
-                Units.AddElement(CurrentUnit.SemanticTree);
+                Units.AddElement(CurrentUnit.SemanticTree, null);
                 UnitTable[UnitName] = CurrentUnit;
                 return CurrentUnit;
             }
@@ -2861,7 +2900,7 @@ namespace PascalABCCompiler
                         {
                             if (IsPossibleNamespace(name_space, false, Path.GetDirectoryName(file)))
                             {
-                                ns.referenced_units.AddElement(new TreeRealization.namespace_unit_node(GetNamespace(name_space), get_location_from_treenode(name_space, tree.file_name)));
+                                ns.referenced_units.AddElement(new TreeRealization.namespace_unit_node(GetNamespace(name_space), get_location_from_treenode(name_space, tree.file_name)), null);
                             }
                             else
                             {
@@ -3118,7 +3157,7 @@ namespace PascalABCCompiler
             return false;
         }
 
-        public CompilationUnit CompileUnit(PascalABCCompiler.TreeRealization.unit_node_list Units, SyntaxTree.unit_or_namespace SyntaxUsesUnit, string prev_path)
+        public CompilationUnit CompileUnit(PascalABCCompiler.TreeRealization.unit_node_list Units, Dictionary<unit_node, CompilationUnit> DirectCompilationUnits, SyntaxTree.unit_or_namespace SyntaxUsesUnit, string prev_path)
         {
             string UnitName = GetUnitFileName(SyntaxUsesUnit, prev_path);
             // имя папки, в которой лежит текущий модуль
@@ -3142,7 +3181,8 @@ namespace PascalABCCompiler
             if (CurrentUnit != null)
                 if (CurrentUnit.State != UnitState.BeginCompilation || CurrentUnit.SemanticTree != null)  //ИЗБАВИТЬСЯ ОТ ВТОРОГО УСЛОВИЯ
                 {
-                    Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath());
+                    if (Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath()))
+                        DirectCompilationUnits.Add(CurrentUnit.SemanticTree, CurrentUnit);
                     Units.AddRange(GetReferences(CurrentUnit));
                     return CurrentUnit;
                 }
@@ -3153,7 +3193,8 @@ namespace PascalABCCompiler
                     if (UnitTable.Count == 0) throw new ProgramModuleExpected(UnitName, null);
                     if ((CurrentUnit = ReadDLL(UnitName)) != null)
                     {
-                        Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath());
+                        if (Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath()))
+                            DirectCompilationUnits.Add(CurrentUnit.SemanticTree, CurrentUnit);
                         UnitTable[UnitName] = CurrentUnit;
                         return CurrentUnit;
                     }
@@ -3169,7 +3210,8 @@ namespace PascalABCCompiler
                     {
                         if ((CurrentUnit = ReadPCU(UnitName)) != null)
                         {
-                            Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath());
+                            if (Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath()))
+                                DirectCompilationUnits.Add(CurrentUnit.SemanticTree, CurrentUnit);
                             Units.AddRange(GetReferences(CurrentUnit));
                             UnitTable[UnitName] = CurrentUnit;
                             return CurrentUnit;
@@ -3326,7 +3368,7 @@ namespace PascalABCCompiler
                 {
                     if (IsPossibleNamespace(SyntaxUsesList[i], true, curr_path) || namespaces.ContainsKey(SyntaxUsesList[i].name.idents[0].name))
                     {
-                        CurrentUnit.InterfaceUsedUnits.AddElement(new TreeRealization.namespace_unit_node(GetNamespace(SyntaxUsesList[i])));
+                        CurrentUnit.InterfaceUsedUnits.AddElement(new TreeRealization.namespace_unit_node(GetNamespace(SyntaxUsesList[i])), null);
                         CurrentUnit.PossibleNamespaces.Add(SyntaxUsesList[i]);
                     }
                     else
@@ -3347,10 +3389,11 @@ namespace PascalABCCompiler
                                         throw new CycleUnitReference(UnitName, SyntaxUsesList[i]);
                                 }
                             }
-                        CompileUnit(CurrentUnit.InterfaceUsedUnits, SyntaxUsesList[i], curr_path);
+                        CompileUnit(CurrentUnit.InterfaceUsedUnits, CurrentUnit.DirectInterfaceCompilationUnits, SyntaxUsesList[i], curr_path);
                         if (CurrentUnit.State == UnitState.Compiled)
                         {
-                            Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath());
+                            if (Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath()))
+                                DirectCompilationUnits.Add(CurrentUnit.SemanticTree, CurrentUnit);
                             Units.AddRange(References);
                             return CurrentUnit;
                         }
@@ -3398,7 +3441,8 @@ namespace PascalABCCompiler
             CurrentUnit.State = UnitState.InterfaceCompiled;
             if (Units != null)
             {
-                Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath());
+                if (Units.AddElement(CurrentUnit.SemanticTree, SyntaxUsesUnit.UsesPath()))
+                    DirectCompilationUnits.Add(CurrentUnit.SemanticTree, CurrentUnit);
                 Units.AddRange(References);
             }
             SyntaxUsesList = GetSyntaxImplementationUsesList(CurrentUnit.SyntaxTree);
@@ -3421,12 +3465,12 @@ namespace PascalABCCompiler
                         }
                         else
                         {
-                            CompileUnit(CurrentUnit.ImplementationUsedUnits, SyntaxUsesList[i], curr_path);
+                            CompileUnit(CurrentUnit.ImplementationUsedUnits, CurrentUnit.DirectImplementationCompilationUnits, SyntaxUsesList[i], curr_path);
                         }
                     }
                     else
                     {
-                        CurrentUnit.ImplementationUsedUnits.AddElement(new TreeRealization.namespace_unit_node(GetNamespace(SyntaxUsesList[i])));
+                        CurrentUnit.ImplementationUsedUnits.AddElement(new TreeRealization.namespace_unit_node(GetNamespace(SyntaxUsesList[i])), null);
                         CurrentUnit.PossibleNamespaces.Add(SyntaxUsesList[i]);
                     }
             }
@@ -3537,7 +3581,7 @@ namespace PascalABCCompiler
             foreach (TreeRealization.unit_node un in cu.InterfaceUsedUnits)
             {
                 if (un is TreeRealization.dot_net_unit_node)
-                    unl.AddElement(un);
+                    unl.AddElement(un, null);
             }
             return unl;
         }
