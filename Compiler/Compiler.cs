@@ -166,6 +166,7 @@ using PascalABCCompiler.SyntaxTreeConverters;
 using System.Text;
 using PascalABCCompiler.TreeRealization;
 using System.Linq;
+
 namespace PascalABCCompiler
 {
     public class CompilerCompilationError : LocatedError
