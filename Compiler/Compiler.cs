@@ -1992,7 +1992,7 @@ namespace PascalABCCompiler
                         else
                             ErrorsList.Add(new ResourceFileNotFound(cd.directive, cd.location));
 
-                    }    
+                    }
                 }
                 string res_file = null;
                 if (project != null)
@@ -2625,7 +2625,7 @@ namespace PascalABCCompiler
             //\MikhailoMMX
 
             var FullFileName = Path.Combine(curr_path, FileName);
-            if (System.IO.File.Exists(FullFileName)) // для отладки с *.inc файлами
+            if (System.IO.File.Exists(FullFileName))
             {
                 var NewFileName = Path.Combine(compilerOptions.OutputDirectory, Path.GetFileName(FullFileName));
                 if (FullFileName != NewFileName) File.Copy(FullFileName, NewFileName, true);
@@ -2797,15 +2797,13 @@ namespace PascalABCCompiler
             string UnitName = null;
             try
             {
-                // "loc == null" для стандартных .dll, как "System.dll"
-                //ToDo а loc.doc было null в тестранере, но я так и не понял почему. не смог воспроизвести в дебаг режиме
-                UnitName = GetReferenceFileName(cd.directive, sc, loc?.doc?.file_name == null ? CompilerOptions.OutputDirectory : Path.GetDirectoryName(loc.doc.file_name));
+                UnitName = GetReferenceFileName(cd.directive, sc, Path.GetDirectoryName(cd.source_file));
             }
             catch (AssemblyNotFound ex)
             {
                 throw;
             }
-            //ToDo плохо, пока дебажил - тут постоянно ловились другие исключения, не связанные с неправильным знаками в путик сборке
+            //ToDo плохо, пока дебажил - тут постоянно ловились другие исключения, не связанные с неправильным знаками в пути к сборке
             catch (Exception ex)
             {
                 throw new InvalidAssemblyPathError(CurrentCompilationUnit.SyntaxTree.file_name, sc);
@@ -2982,23 +2980,23 @@ namespace PascalABCCompiler
                 directives = ConvertDirectives(Unit.SyntaxTree);
             if (CompilerOptions.UseDllForSystemUnits)
             {
-                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\PABCRtl.dll", null, null));
-                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\mscorlib.dll", null, null));
-                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.dll", null, null));
-                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.Core.dll", null, null));
-                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.Numerics.dll", null, null));
-                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.Windows.Forms.dll", null, null));
-                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.Drawing.dll", null, null));
+                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\PABCRtl.dll", null, "."));
+                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\mscorlib.dll", null, "."));
+                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.dll", null, "."));
+                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.Core.dll", null, "."));
+                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.Numerics.dll", null, "."));
+                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.Windows.Forms.dll", null, "."));
+                directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\System.Drawing.dll", null, "."));
                 if (Unit.SyntaxTree is SyntaxTree.program_module && (Unit.SyntaxTree as SyntaxTree.program_module).used_units != null)
                 foreach (SyntaxTree.unit_or_namespace uui in (Unit.SyntaxTree as SyntaxTree.program_module).used_units.units)
                 {
                     if (uui.name.ToString() == "Graph3D")
                     {
-                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\PresentationFramework.dll", null, null));
-                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\WindowsBase.dll", null, null));
-                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\PresentationCore.dll", null, null));
-                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\HelixToolkit.Wpf.dll", null, null));
-                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\HelixToolkit.dll", null, null));
+                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\PresentationFramework.dll", null, "."));
+                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\WindowsBase.dll", null, "."));
+                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\PresentationCore.dll", null, "."));
+                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\HelixToolkit.Wpf.dll", null, "."));
+                        directives.Add(new TreeRealization.compiler_directive("reference", "%GAC%\\HelixToolkit.dll", null, "."));
                     }
                 }
             }
@@ -3016,7 +3014,7 @@ namespace PascalABCCompiler
             {
             	foreach (ReferenceInfo ri in project.references)
             	{
-            		CompileReference(res,new TreeRealization.compiler_directive("reference",ri.full_assembly_name,null,null));
+                    CompileReference(res, new TreeRealization.compiler_directive("reference", ri.full_assembly_name, null, project.MainFile));
             	}
             }
             return res;
