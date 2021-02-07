@@ -2503,7 +2503,6 @@ namespace PascalABCCompiler.PCU
 
         private void VisitTypeDefinition(common_type_node type)
         {
-            if (class_info.ContainsKey(type)) return;
             int offset = 0;
             if (class_info.ContainsKey(type))
                 return;
@@ -2792,15 +2791,13 @@ namespace PascalABCCompiler.PCU
 
         private void VisitTypeMemberDefinition(common_type_node ctn)
         {
-            ClassInfo ci = class_info[ctn];
-            if (ci == null) return; // Если класс уже был один раз обработан
-            class_info[ctn] = null;
             VisitConstantInTypeDefinitions(ctn);
             VisitFieldDefinitions(ctn);
             VisitMethodDefinitions(ctn);
             VisitPropertyDefinitions(ctn);
             VisitEventDefinitions(ctn);
             int tmp = (int)bw.BaseStream.Position;
+            ClassInfo ci = class_info[ctn];
             int def_prop_off = ci.def_prop_off;
             int pos = ci.names_pos;
             int base_class_off = ci.base_class_off;
