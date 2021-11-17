@@ -23,8 +23,8 @@ if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Community\MSBuild\15.
 
 
 
-) else if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\MSBuild.exe" (
-"%ProgramFiles(x86)%\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\MSBuild.exe" %1 %2 %3 %4
+) else if exist "C:\Program Files\Microsoft Visual Studio\2022\Professional\Msbuild\Current\Bin\MSBuild.exe" (
+"C:\Program Files\Microsoft Visual Studio\2022\Professional\Msbuild\Current\Bin\MSBuild.exe" %1 %2 %3 %4
 
 
 
