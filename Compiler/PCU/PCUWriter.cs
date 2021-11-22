@@ -428,6 +428,13 @@ namespace PascalABCCompiler.PCU
 				pcu_file.imp_entitles[i] = imp_entitles[i];
             fbw.Write(PCUFile.Header);
             fbw.Write(PCUFile.SupportedVersion);
+
+            // .pcu с другими настройками нет смысла читать
+            fbw.Write(compiler.CompilerOptions.Debug);
+            fbw.Write(compiler.CompilerOptions.ForceDefines.Count);
+            foreach (var define in compiler.CompilerOptions.ForceDefines)
+                fbw.Write(define);
+
             fbw.Write((Int64)0);//CRC32
             fbw.Write(pcu_file.UseRtlDll);
             fbw.Write(pcu_file.IncludeDebugInfo);

@@ -132,13 +132,13 @@ namespace PascalABCCompiler.PCU
             public PCUFile FileHead=null;
         }
         
-        public static PCUFileHeadState GetPCUFileHeadState(string fileName)
+        public static PCUFileHeadState GetPCUFileHeadState(string fileName, CompilerOptions opt)
         {
             FileStream fs = File.OpenRead(fileName);
             BinaryReader br = new BinaryReader(fs);
             PCUFileHeadState State = new PCUFileHeadState();
             PCUFile pcuHead = new PCUFile();
-            State.IsPCUFile=ReadPCUHead(pcuHead, br);
+            State.IsPCUFile=ReadPCUHead(pcuHead, fileName, br, opt);
             br.Close();
             fs.Close();
             if (!State.IsPCUFile)
@@ -541,13 +541,39 @@ namespace PascalABCCompiler.PCU
             throw new InvalidPCUFule(unit_name);
         }
         
-        private static bool ReadPCUHead(PCUFile pcu_file, BinaryReader br)
+        private static bool ReadPCUHead(PCUFile pcu_file, string fileName, BinaryReader br, CompilerOptions opt)
         {
             char[] Header = br.ReadChars(PCUFile.Header.Length);
             for (int i = 0; i < PCUFile.Header.Length; i++)
                 if (Header[i] != PCUFile.Header[i])
                     return false;
             pcu_file.Version = br.ReadInt16();
+
+            // .pcu с другими настройками нет смысла читать
+            // Но только если это не стандартный модуль - они все компилируются в релизе и без ForceDefines
+            var is_standard_unit = false;
+            foreach (var dir in opt.ParserSearchPatchs)
+                if (fileName.StartsWith(dir) && (fileName[dir.Length] == Path.DirectorySeparatorChar || fileName[dir.Length] == Path.AltDirectorySeparatorChar))
+                    is_standard_unit = true;
+            if (!is_standard_unit) return false;
+
+            if (br.ReadBoolean() != opt.Debug && !is_standard_unit) return false;
+
+            var defines = new List<string>(br.ReadInt32());
+            if (defines.Capacity == opt.ForceDefines.Count)
+            {
+                for (int i = 0; i < defines.Capacity; i++)
+                    defines.Add(br.ReadString());
+                foreach (var define in opt.ForceDefines)
+                    if (!defines.Remove(define))
+                    {
+                        if (!is_standard_unit) return false;
+                        break;
+                    }
+            }
+            else if (!is_standard_unit)
+                return false;
+
             pcu_file.CRC = br.ReadInt64();
             pcu_file.UseRtlDll = br.ReadBoolean();
             pcu_file.IncludeDebugInfo = br.ReadBoolean();
@@ -557,7 +583,7 @@ namespace PascalABCCompiler.PCU
         //чтение заголовка PCU
 		private void ReadPCUHeader()
 		{
-            if (!ReadPCUHead(pcu_file, br) || PCUFile.SupportedVersion != pcu_file.Version)
+            if (!ReadPCUHead(pcu_file, FileName, br, comp.CompilerOptions) || PCUFile.SupportedVersion != pcu_file.Version)
                 InvalidUnitDetected();
             
             if(pcu_file.IncludeDebugInfo)
