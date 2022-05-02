@@ -563,13 +563,15 @@ type
     public static property TEXTURE_BIT:          AttribMask read new AttribMask($40000);
     public static property SCISSOR_BIT:          AttribMask read new AttribMask($80000);
     public static property MULTISAMPLE_BIT:      AttribMask read new AttribMask($20000000);
-    public static property MULTISAMPLE_BIT_3DFX: AttribMask read new AttribMask($20000000);
     public static property MULTISAMPLE_BIT_ARB:  AttribMask read new AttribMask($20000000);
     public static property MULTISAMPLE_BIT_EXT:  AttribMask read new AttribMask($20000000);
+    public static property MULTISAMPLE_BIT_3DFX: AttribMask read new AttribMask($20000000);
     public static property ALL_ATTRIB_BITS:      AttribMask read new AttribMask($FFFFFFFF);
     
     public static function operator+(f1,f2: AttribMask) := new AttribMask(f1.val or f2.val);
     public static function operator or(f1,f2: AttribMask) := f1+f2;
+    
+    public static procedure operator+=(var f1: AttribMask; f2: AttribMask) := f1 := f1+f2;
     
     public property HAS_FLAG_CURRENT_BIT:          boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_POINT_BIT:            boolean read self.val and $0002 <> 0;
@@ -592,9 +594,9 @@ type
     public property HAS_FLAG_TEXTURE_BIT:          boolean read self.val and $40000 <> 0;
     public property HAS_FLAG_SCISSOR_BIT:          boolean read self.val and $80000 <> 0;
     public property HAS_FLAG_MULTISAMPLE_BIT:      boolean read self.val and $20000000 <> 0;
-    public property HAS_FLAG_MULTISAMPLE_BIT_3DFX: boolean read self.val and $20000000 <> 0;
     public property HAS_FLAG_MULTISAMPLE_BIT_ARB:  boolean read self.val and $20000000 <> 0;
     public property HAS_FLAG_MULTISAMPLE_BIT_EXT:  boolean read self.val and $20000000 <> 0;
+    public property HAS_FLAG_MULTISAMPLE_BIT_3DFX: boolean read self.val and $20000000 <> 0;
     public property HAS_FLAG_ALL_ATTRIB_BITS:      boolean read self.val and $FFFFFFFF <> 0;
     
     public function ToString: string; override;
@@ -621,15 +623,17 @@ type
       if self.val and UInt32($40000) = UInt32($40000) then res += 'TEXTURE_BIT+';
       if self.val and UInt32($80000) = UInt32($80000) then res += 'SCISSOR_BIT+';
       if self.val and UInt32($20000000) = UInt32($20000000) then res += 'MULTISAMPLE_BIT+';
-      if self.val and UInt32($20000000) = UInt32($20000000) then res += 'MULTISAMPLE_BIT_3DFX+';
       if self.val and UInt32($20000000) = UInt32($20000000) then res += 'MULTISAMPLE_BIT_ARB+';
       if self.val and UInt32($20000000) = UInt32($20000000) then res += 'MULTISAMPLE_BIT_EXT+';
+      if self.val and UInt32($20000000) = UInt32($20000000) then res += 'MULTISAMPLE_BIT_3DFX+';
       if self.val and UInt32($FFFFFFFF) = UInt32($FFFFFFFF) then res += 'ALL_ATTRIB_BITS+';
       if res.Length<>0 then
       begin
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'AttribMask[{self.val}]';
     end;
     
@@ -1086,6 +1090,8 @@ type
     public static function operator+(f1,f2: BufferStorageMask) := new BufferStorageMask(f1.val or f2.val);
     public static function operator or(f1,f2: BufferStorageMask) := f1+f2;
     
+    public static procedure operator+=(var f1: BufferStorageMask; f2: BufferStorageMask) := f1 := f1+f2;
+    
     public property HAS_FLAG_MAP_READ_BIT:                  boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_MAP_READ_BIT_EXT:              boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_MAP_WRITE_BIT:                 boolean read self.val and $0002 <> 0;
@@ -1127,6 +1133,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'BufferStorageMask[{self.val}]';
     end;
     
@@ -1227,6 +1235,8 @@ type
     public static function operator+(f1,f2: ClearBufferMask) := new ClearBufferMask(f1.val or f2.val);
     public static function operator or(f1,f2: ClearBufferMask) := f1+f2;
     
+    public static procedure operator+=(var f1: ClearBufferMask; f2: ClearBufferMask) := f1 := f1+f2;
+    
     public property HAS_FLAG_DEPTH_BUFFER_BIT:       boolean read self.val and $0100 <> 0;
     public property HAS_FLAG_ACCUM_BUFFER_BIT:       boolean read self.val and $0200 <> 0;
     public property HAS_FLAG_STENCIL_BUFFER_BIT:     boolean read self.val and $0400 <> 0;
@@ -1246,6 +1256,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'ClearBufferMask[{self.val}]';
     end;
     
@@ -1262,6 +1274,8 @@ type
     public static function operator+(f1,f2: ClientAttribMask) := new ClientAttribMask(f1.val or f2.val);
     public static function operator or(f1,f2: ClientAttribMask) := f1+f2;
     
+    public static procedure operator+=(var f1: ClientAttribMask; f2: ClientAttribMask) := f1 := f1+f2;
+    
     public property HAS_FLAG_CLIENT_PIXEL_STORE_BIT:  boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_CLIENT_VERTEX_ARRAY_BIT: boolean read self.val and $0002 <> 0;
     public property HAS_FLAG_CLIENT_ALL_ATTRIB_BITS:  boolean read self.val and $FFFFFFFF <> 0;
@@ -1277,6 +1291,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'ClientAttribMask[{self.val}]';
     end;
     
@@ -1318,35 +1334,35 @@ type
     public val: UInt32;
     public constructor(val: UInt32) := self.val := val;
     
-    public static property CLIP_DISTANCE0: ClipPlaneName read new ClipPlaneName($3000);
     public static property CLIP_PLANE0:    ClipPlaneName read new ClipPlaneName($3000);
-    public static property CLIP_DISTANCE1: ClipPlaneName read new ClipPlaneName($3001);
+    public static property CLIP_DISTANCE0: ClipPlaneName read new ClipPlaneName($3000);
     public static property CLIP_PLANE1:    ClipPlaneName read new ClipPlaneName($3001);
-    public static property CLIP_DISTANCE2: ClipPlaneName read new ClipPlaneName($3002);
+    public static property CLIP_DISTANCE1: ClipPlaneName read new ClipPlaneName($3001);
     public static property CLIP_PLANE2:    ClipPlaneName read new ClipPlaneName($3002);
-    public static property CLIP_DISTANCE3: ClipPlaneName read new ClipPlaneName($3003);
+    public static property CLIP_DISTANCE2: ClipPlaneName read new ClipPlaneName($3002);
     public static property CLIP_PLANE3:    ClipPlaneName read new ClipPlaneName($3003);
-    public static property CLIP_DISTANCE4: ClipPlaneName read new ClipPlaneName($3004);
+    public static property CLIP_DISTANCE3: ClipPlaneName read new ClipPlaneName($3003);
     public static property CLIP_PLANE4:    ClipPlaneName read new ClipPlaneName($3004);
-    public static property CLIP_DISTANCE5: ClipPlaneName read new ClipPlaneName($3005);
+    public static property CLIP_DISTANCE4: ClipPlaneName read new ClipPlaneName($3004);
     public static property CLIP_PLANE5:    ClipPlaneName read new ClipPlaneName($3005);
+    public static property CLIP_DISTANCE5: ClipPlaneName read new ClipPlaneName($3005);
     public static property CLIP_DISTANCE6: ClipPlaneName read new ClipPlaneName($3006);
     public static property CLIP_DISTANCE7: ClipPlaneName read new ClipPlaneName($3007);
     
     public function ToString: string; override;
     begin
-      if self.val = UInt32($3000) then Result := 'CLIP_DISTANCE0' else
       if self.val = UInt32($3000) then Result := 'CLIP_PLANE0' else
-      if self.val = UInt32($3001) then Result := 'CLIP_DISTANCE1' else
+      if self.val = UInt32($3000) then Result := 'CLIP_DISTANCE0' else
       if self.val = UInt32($3001) then Result := 'CLIP_PLANE1' else
-      if self.val = UInt32($3002) then Result := 'CLIP_DISTANCE2' else
+      if self.val = UInt32($3001) then Result := 'CLIP_DISTANCE1' else
       if self.val = UInt32($3002) then Result := 'CLIP_PLANE2' else
-      if self.val = UInt32($3003) then Result := 'CLIP_DISTANCE3' else
+      if self.val = UInt32($3002) then Result := 'CLIP_DISTANCE2' else
       if self.val = UInt32($3003) then Result := 'CLIP_PLANE3' else
-      if self.val = UInt32($3004) then Result := 'CLIP_DISTANCE4' else
+      if self.val = UInt32($3003) then Result := 'CLIP_DISTANCE3' else
       if self.val = UInt32($3004) then Result := 'CLIP_PLANE4' else
-      if self.val = UInt32($3005) then Result := 'CLIP_DISTANCE5' else
+      if self.val = UInt32($3004) then Result := 'CLIP_DISTANCE4' else
       if self.val = UInt32($3005) then Result := 'CLIP_PLANE5' else
+      if self.val = UInt32($3005) then Result := 'CLIP_DISTANCE5' else
       if self.val = UInt32($3006) then Result := 'CLIP_DISTANCE6' else
       if self.val = UInt32($3007) then Result := 'CLIP_DISTANCE7' else
         Result := $'ClipPlaneName[{self.val}]';
@@ -1933,18 +1949,18 @@ type
     public static property TEXTURE_2D:                              EnableCap read new EnableCap($0DE1);
     public static property POLYGON_OFFSET_POINT:                    EnableCap read new EnableCap($2A01);
     public static property POLYGON_OFFSET_LINE:                     EnableCap read new EnableCap($2A02);
-    public static property CLIP_DISTANCE0:                          EnableCap read new EnableCap($3000);
     public static property CLIP_PLANE0:                             EnableCap read new EnableCap($3000);
-    public static property CLIP_DISTANCE1:                          EnableCap read new EnableCap($3001);
+    public static property CLIP_DISTANCE0:                          EnableCap read new EnableCap($3000);
     public static property CLIP_PLANE1:                             EnableCap read new EnableCap($3001);
-    public static property CLIP_DISTANCE2:                          EnableCap read new EnableCap($3002);
+    public static property CLIP_DISTANCE1:                          EnableCap read new EnableCap($3001);
     public static property CLIP_PLANE2:                             EnableCap read new EnableCap($3002);
-    public static property CLIP_DISTANCE3:                          EnableCap read new EnableCap($3003);
+    public static property CLIP_DISTANCE2:                          EnableCap read new EnableCap($3002);
     public static property CLIP_PLANE3:                             EnableCap read new EnableCap($3003);
-    public static property CLIP_DISTANCE4:                          EnableCap read new EnableCap($3004);
+    public static property CLIP_DISTANCE3:                          EnableCap read new EnableCap($3003);
     public static property CLIP_PLANE4:                             EnableCap read new EnableCap($3004);
-    public static property CLIP_DISTANCE5:                          EnableCap read new EnableCap($3005);
+    public static property CLIP_DISTANCE4:                          EnableCap read new EnableCap($3004);
     public static property CLIP_PLANE5:                             EnableCap read new EnableCap($3005);
+    public static property CLIP_DISTANCE5:                          EnableCap read new EnableCap($3005);
     public static property CLIP_DISTANCE6:                          EnableCap read new EnableCap($3006);
     public static property CLIP_DISTANCE7:                          EnableCap read new EnableCap($3007);
     public static property LIGHT0:                                  EnableCap read new EnableCap($4000);
@@ -2078,18 +2094,18 @@ type
       if self.val = UInt32($0DE1) then Result := 'TEXTURE_2D' else
       if self.val = UInt32($2A01) then Result := 'POLYGON_OFFSET_POINT' else
       if self.val = UInt32($2A02) then Result := 'POLYGON_OFFSET_LINE' else
-      if self.val = UInt32($3000) then Result := 'CLIP_DISTANCE0' else
       if self.val = UInt32($3000) then Result := 'CLIP_PLANE0' else
-      if self.val = UInt32($3001) then Result := 'CLIP_DISTANCE1' else
+      if self.val = UInt32($3000) then Result := 'CLIP_DISTANCE0' else
       if self.val = UInt32($3001) then Result := 'CLIP_PLANE1' else
-      if self.val = UInt32($3002) then Result := 'CLIP_DISTANCE2' else
+      if self.val = UInt32($3001) then Result := 'CLIP_DISTANCE1' else
       if self.val = UInt32($3002) then Result := 'CLIP_PLANE2' else
-      if self.val = UInt32($3003) then Result := 'CLIP_DISTANCE3' else
+      if self.val = UInt32($3002) then Result := 'CLIP_DISTANCE2' else
       if self.val = UInt32($3003) then Result := 'CLIP_PLANE3' else
-      if self.val = UInt32($3004) then Result := 'CLIP_DISTANCE4' else
+      if self.val = UInt32($3003) then Result := 'CLIP_DISTANCE3' else
       if self.val = UInt32($3004) then Result := 'CLIP_PLANE4' else
-      if self.val = UInt32($3005) then Result := 'CLIP_DISTANCE5' else
+      if self.val = UInt32($3004) then Result := 'CLIP_DISTANCE4' else
       if self.val = UInt32($3005) then Result := 'CLIP_PLANE5' else
+      if self.val = UInt32($3005) then Result := 'CLIP_DISTANCE5' else
       if self.val = UInt32($3006) then Result := 'CLIP_DISTANCE6' else
       if self.val = UInt32($3007) then Result := 'CLIP_DISTANCE7' else
       if self.val = UInt32($4000) then Result := 'LIGHT0' else
@@ -2194,8 +2210,8 @@ type
     public static property INVALID_FRAMEBUFFER_OPERATION:     ErrorCode read new ErrorCode($0506);
     public static property INVALID_FRAMEBUFFER_OPERATION_EXT: ErrorCode read new ErrorCode($0506);
     public static property INVALID_FRAMEBUFFER_OPERATION_OES: ErrorCode read new ErrorCode($0506);
-    public static property TABLE_TOO_LARGE:                   ErrorCode read new ErrorCode($8031);
     public static property TABLE_TOO_LARGE_EXT:               ErrorCode read new ErrorCode($8031);
+    public static property TABLE_TOO_LARGE:                   ErrorCode read new ErrorCode($8031);
     public static property TEXTURE_TOO_LARGE_EXT:             ErrorCode read new ErrorCode($8065);
     
     public function ToString: string; override;
@@ -2210,8 +2226,8 @@ type
       if self.val = UInt32($0506) then Result := 'INVALID_FRAMEBUFFER_OPERATION' else
       if self.val = UInt32($0506) then Result := 'INVALID_FRAMEBUFFER_OPERATION_EXT' else
       if self.val = UInt32($0506) then Result := 'INVALID_FRAMEBUFFER_OPERATION_OES' else
-      if self.val = UInt32($8031) then Result := 'TABLE_TOO_LARGE' else
       if self.val = UInt32($8031) then Result := 'TABLE_TOO_LARGE_EXT' else
+      if self.val = UInt32($8031) then Result := 'TABLE_TOO_LARGE' else
       if self.val = UInt32($8065) then Result := 'TEXTURE_TOO_LARGE_EXT' else
         Result := $'ErrorCode[{self.val}]';
     end;
@@ -2602,6 +2618,8 @@ type
     public static function operator+(f1,f2: GDI_LayerPlaneFlags) := new GDI_LayerPlaneFlags(f1.val or f2.val);
     public static function operator or(f1,f2: GDI_LayerPlaneFlags) := f1+f2;
     
+    public static procedure operator+=(var f1: GDI_LayerPlaneFlags; f2: GDI_LayerPlaneFlags) := f1 := f1+f2;
+    
     public property HAS_FLAG_DOUBLEBUFFER:   boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_STEREO:         boolean read self.val and $0002 <> 0;
     public property HAS_FLAG_SUPPORT_GDI:    boolean read self.val and $0010 <> 0;
@@ -2631,6 +2649,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'GDI_LayerPlaneFlags[{self.val}]';
     end;
     
@@ -2677,6 +2697,8 @@ type
     public static function operator+(f1,f2: GDI_PixelFormatFlags) := new GDI_PixelFormatFlags(f1.val or f2.val);
     public static function operator or(f1,f2: GDI_PixelFormatFlags) := f1+f2;
     
+    public static procedure operator+=(var f1: GDI_PixelFormatFlags; f2: GDI_PixelFormatFlags) := f1 := f1+f2;
+    
     public property HAS_FLAG_DOUBLEBUFFER:          boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_STEREO:                boolean read self.val and $0002 <> 0;
     public property HAS_FLAG_DRAW_TO_WINDOW:        boolean read self.val and $0004 <> 0;
@@ -2720,6 +2742,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'GDI_PixelFormatFlags[{self.val}]';
     end;
     
@@ -2940,8 +2964,8 @@ type
     public static property DEPTH_BIAS:                                     GetPName read new GetPName($0D1F);
     public static property MAX_EVAL_ORDER:                                 GetPName read new GetPName($0D30);
     public static property MAX_LIGHTS:                                     GetPName read new GetPName($0D31);
-    public static property MAX_CLIP_DISTANCES:                             GetPName read new GetPName($0D32);
     public static property MAX_CLIP_PLANES:                                GetPName read new GetPName($0D32);
+    public static property MAX_CLIP_DISTANCES:                             GetPName read new GetPName($0D32);
     public static property MAX_TEXTURE_SIZE:                               GetPName read new GetPName($0D33);
     public static property MAX_PIXEL_MAP_TABLE:                            GetPName read new GetPName($0D34);
     public static property MAX_ATTRIB_STACK_DEPTH:                         GetPName read new GetPName($0D35);
@@ -3260,8 +3284,8 @@ type
     public static property UNIFORM_BUFFER_OFFSET_ALIGNMENT:                GetPName read new GetPName($8A34);
     public static property MAX_FRAGMENT_UNIFORM_COMPONENTS:                GetPName read new GetPName($8B49);
     public static property MAX_VERTEX_UNIFORM_COMPONENTS:                  GetPName read new GetPName($8B4A);
-    public static property MAX_VARYING_COMPONENTS:                         GetPName read new GetPName($8B4B);
     public static property MAX_VARYING_FLOATS:                             GetPName read new GetPName($8B4B);
+    public static property MAX_VARYING_COMPONENTS:                         GetPName read new GetPName($8B4B);
     public static property MAX_VERTEX_TEXTURE_IMAGE_UNITS:                 GetPName read new GetPName($8B4C);
     public static property MAX_COMBINED_TEXTURE_IMAGE_UNITS:               GetPName read new GetPName($8B4D);
     public static property FRAGMENT_SHADER_DERIVATIVE_HINT:                GetPName read new GetPName($8B8B);
@@ -3515,8 +3539,8 @@ type
       if self.val = UInt32($0D1F) then Result := 'DEPTH_BIAS' else
       if self.val = UInt32($0D30) then Result := 'MAX_EVAL_ORDER' else
       if self.val = UInt32($0D31) then Result := 'MAX_LIGHTS' else
-      if self.val = UInt32($0D32) then Result := 'MAX_CLIP_DISTANCES' else
       if self.val = UInt32($0D32) then Result := 'MAX_CLIP_PLANES' else
+      if self.val = UInt32($0D32) then Result := 'MAX_CLIP_DISTANCES' else
       if self.val = UInt32($0D33) then Result := 'MAX_TEXTURE_SIZE' else
       if self.val = UInt32($0D34) then Result := 'MAX_PIXEL_MAP_TABLE' else
       if self.val = UInt32($0D35) then Result := 'MAX_ATTRIB_STACK_DEPTH' else
@@ -3835,8 +3859,8 @@ type
       if self.val = UInt32($8A34) then Result := 'UNIFORM_BUFFER_OFFSET_ALIGNMENT' else
       if self.val = UInt32($8B49) then Result := 'MAX_FRAGMENT_UNIFORM_COMPONENTS' else
       if self.val = UInt32($8B4A) then Result := 'MAX_VERTEX_UNIFORM_COMPONENTS' else
-      if self.val = UInt32($8B4B) then Result := 'MAX_VARYING_COMPONENTS' else
       if self.val = UInt32($8B4B) then Result := 'MAX_VARYING_FLOATS' else
+      if self.val = UInt32($8B4B) then Result := 'MAX_VARYING_COMPONENTS' else
       if self.val = UInt32($8B4C) then Result := 'MAX_VERTEX_TEXTURE_IMAGE_UNITS' else
       if self.val = UInt32($8B4D) then Result := 'MAX_COMBINED_TEXTURE_IMAGE_UNITS' else
       if self.val = UInt32($8B8B) then Result := 'FRAGMENT_SHADER_DERIVATIVE_HINT' else
@@ -3985,8 +4009,8 @@ type
     
     public static property TEXTURE_WIDTH:                        GetTextureParameter read new GetTextureParameter($1000);
     public static property TEXTURE_HEIGHT:                       GetTextureParameter read new GetTextureParameter($1001);
-    public static property TEXTURE_COMPONENTS:                   GetTextureParameter read new GetTextureParameter($1003);
     public static property TEXTURE_INTERNAL_FORMAT:              GetTextureParameter read new GetTextureParameter($1003);
+    public static property TEXTURE_COMPONENTS:                   GetTextureParameter read new GetTextureParameter($1003);
     public static property TEXTURE_BORDER_COLOR:                 GetTextureParameter read new GetTextureParameter($1004);
     public static property TEXTURE_BORDER_COLOR_NV:              GetTextureParameter read new GetTextureParameter($1004);
     public static property TEXTURE_BORDER:                       GetTextureParameter read new GetTextureParameter($1005);
@@ -4044,8 +4068,8 @@ type
     begin
       if self.val = UInt32($1000) then Result := 'TEXTURE_WIDTH' else
       if self.val = UInt32($1001) then Result := 'TEXTURE_HEIGHT' else
-      if self.val = UInt32($1003) then Result := 'TEXTURE_COMPONENTS' else
       if self.val = UInt32($1003) then Result := 'TEXTURE_INTERNAL_FORMAT' else
+      if self.val = UInt32($1003) then Result := 'TEXTURE_COMPONENTS' else
       if self.val = UInt32($1004) then Result := 'TEXTURE_BORDER_COLOR' else
       if self.val = UInt32($1004) then Result := 'TEXTURE_BORDER_COLOR_NV' else
       if self.val = UInt32($1005) then Result := 'TEXTURE_BORDER' else
@@ -4544,8 +4568,8 @@ type
     public static property STENCIL_INDEX8_OES:                            InternalFormat read new InternalFormat($8D48);
     public static property STENCIL_INDEX16:                               InternalFormat read new InternalFormat($8D49);
     public static property STENCIL_INDEX16_EXT:                           InternalFormat read new InternalFormat($8D49);
-    public static property RGB565:                                        InternalFormat read new InternalFormat($8D62);
     public static property RGB565_OES:                                    InternalFormat read new InternalFormat($8D62);
+    public static property RGB565:                                        InternalFormat read new InternalFormat($8D62);
     public static property ETC1_RGB8_OES:                                 InternalFormat read new InternalFormat($8D64);
     public static property RGBA32UI:                                      InternalFormat read new InternalFormat($8D70);
     public static property RGBA32UI_EXT:                                  InternalFormat read new InternalFormat($8D70);
@@ -4940,8 +4964,8 @@ type
       if self.val = UInt32($8D48) then Result := 'STENCIL_INDEX8_OES' else
       if self.val = UInt32($8D49) then Result := 'STENCIL_INDEX16' else
       if self.val = UInt32($8D49) then Result := 'STENCIL_INDEX16_EXT' else
-      if self.val = UInt32($8D62) then Result := 'RGB565' else
       if self.val = UInt32($8D62) then Result := 'RGB565_OES' else
+      if self.val = UInt32($8D62) then Result := 'RGB565' else
       if self.val = UInt32($8D64) then Result := 'ETC1_RGB8_OES' else
       if self.val = UInt32($8D70) then Result := 'RGBA32UI' else
       if self.val = UInt32($8D70) then Result := 'RGBA32UI_EXT' else
@@ -5667,6 +5691,8 @@ type
     public static function operator+(f1,f2: MapBufferAccessMask) := new MapBufferAccessMask(f1.val or f2.val);
     public static function operator or(f1,f2: MapBufferAccessMask) := f1+f2;
     
+    public static procedure operator+=(var f1: MapBufferAccessMask; f2: MapBufferAccessMask) := f1 := f1+f2;
+    
     public property HAS_FLAG_MAP_READ_BIT:                  boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_MAP_READ_BIT_EXT:              boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_MAP_WRITE_BIT:                 boolean read self.val and $0002 <> 0;
@@ -5708,6 +5734,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'MapBufferAccessMask[{self.val}]';
     end;
     
@@ -5886,6 +5914,8 @@ type
     public static function operator+(f1,f2: MemoryBarrierMask) := new MemoryBarrierMask(f1.val or f2.val);
     public static function operator or(f1,f2: MemoryBarrierMask) := f1+f2;
     
+    public static procedure operator+=(var f1: MemoryBarrierMask; f2: MemoryBarrierMask) := f1 := f1+f2;
+    
     public property HAS_FLAG_VERTEX_ATTRIB_ARRAY_BARRIER_BIT:      boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_VERTEX_ATTRIB_ARRAY_BARRIER_BIT_EXT:  boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_ELEMENT_ARRAY_BARRIER_BIT:            boolean read self.val and $0002 <> 0;
@@ -5957,6 +5987,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'MemoryBarrierMask[{self.val}]';
     end;
     
@@ -6313,6 +6345,8 @@ type
     public static function operator+(f1,f2: PathFontStyle) := new PathFontStyle(f1.val or f2.val);
     public static function operator or(f1,f2: PathFontStyle) := f1+f2;
     
+    public static procedure operator+=(var f1: PathFontStyle; f2: PathFontStyle) := f1 := f1+f2;
+    
     public property ANY_FLAGS: boolean read self.val<>0;
     public property HAS_FLAG_BOLD_BIT_NV:   boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_ITALIC_BIT_NV: boolean read self.val and $0002 <> 0;
@@ -6320,7 +6354,6 @@ type
     public function ToString: string; override;
     begin
       var res := new StringBuilder;
-      if self.val and UInt32($0000) = UInt32($0000) then res += 'NONE+';
       if self.val and UInt32($0001) = UInt32($0001) then res += 'BOLD_BIT_NV+';
       if self.val and UInt32($0002) = UInt32($0002) then res += 'ITALIC_BIT_NV+';
       if res.Length<>0 then
@@ -6328,6 +6361,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'PathFontStyle[{self.val}]';
     end;
     
@@ -6438,6 +6473,8 @@ type
     public static function operator+(f1,f2: PathMetricMask) := new PathMetricMask(f1.val or f2.val);
     public static function operator or(f1,f2: PathMetricMask) := f1+f2;
     
+    public static procedure operator+=(var f1: PathMetricMask; f2: PathMetricMask) := f1 := f1+f2;
+    
     public property HAS_FLAG_GLYPH_WIDTH_BIT_NV:                      boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_GLYPH_HEIGHT_BIT_NV:                     boolean read self.val and $0002 <> 0;
     public property HAS_FLAG_GLYPH_HORIZONTAL_BEARING_X_BIT_NV:       boolean read self.val and $0004 <> 0;
@@ -6493,6 +6530,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'PathMetricMask[{self.val}]';
     end;
     
@@ -6640,6 +6679,8 @@ type
     public static function operator+(f1,f2: PipeParticipationTypeFlags) := new PipeParticipationTypeFlags(f1.val or f2.val);
     public static function operator or(f1,f2: PipeParticipationTypeFlags) := f1+f2;
     
+    public static procedure operator+=(var f1: PipeParticipationTypeFlags; f2: PipeParticipationTypeFlags) := f1 := f1+f2;
+    
     public property HAS_FLAG_DISPLAY_PIPE_SGIX: boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_RENDER_PIPE_SGIX:  boolean read self.val and $0002 <> 0;
     
@@ -6653,6 +6694,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'PipeParticipationTypeFlags[{self.val}]';
     end;
     
@@ -8007,8 +8050,8 @@ type
     public static property STENCIL_INDEX8_OES:                            SizedInternalFormat read new SizedInternalFormat($8D48);
     public static property STENCIL_INDEX16:                               SizedInternalFormat read new SizedInternalFormat($8D49);
     public static property STENCIL_INDEX16_EXT:                           SizedInternalFormat read new SizedInternalFormat($8D49);
-    public static property RGB565:                                        SizedInternalFormat read new SizedInternalFormat($8D62);
     public static property RGB565_OES:                                    SizedInternalFormat read new SizedInternalFormat($8D62);
+    public static property RGB565:                                        SizedInternalFormat read new SizedInternalFormat($8D62);
     public static property ETC1_RGB8_OES:                                 SizedInternalFormat read new SizedInternalFormat($8D64);
     public static property RGBA32UI:                                      SizedInternalFormat read new SizedInternalFormat($8D70);
     public static property RGBA32UI_EXT:                                  SizedInternalFormat read new SizedInternalFormat($8D70);
@@ -8357,8 +8400,8 @@ type
       if self.val = UInt32($8D48) then Result := 'STENCIL_INDEX8_OES' else
       if self.val = UInt32($8D49) then Result := 'STENCIL_INDEX16' else
       if self.val = UInt32($8D49) then Result := 'STENCIL_INDEX16_EXT' else
-      if self.val = UInt32($8D62) then Result := 'RGB565' else
       if self.val = UInt32($8D62) then Result := 'RGB565_OES' else
+      if self.val = UInt32($8D62) then Result := 'RGB565' else
       if self.val = UInt32($8D64) then Result := 'ETC1_RGB8_OES' else
       if self.val = UInt32($8D70) then Result := 'RGBA32UI' else
       if self.val = UInt32($8D70) then Result := 'RGBA32UI_EXT' else
@@ -8684,6 +8727,8 @@ type
     public static function operator+(f1,f2: SyncObjectMask) := new SyncObjectMask(f1.val or f2.val);
     public static function operator or(f1,f2: SyncObjectMask) := f1+f2;
     
+    public static procedure operator+=(var f1: SyncObjectMask; f2: SyncObjectMask) := f1 := f1+f2;
+    
     public property HAS_FLAG_SYNC_FLUSH_COMMANDS_BIT:       boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_SYNC_FLUSH_COMMANDS_BIT_APPLE: boolean read self.val and $0001 <> 0;
     
@@ -8697,6 +8742,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'SyncObjectMask[{self.val}]';
     end;
     
@@ -8874,8 +8921,8 @@ type
     
     public static property TEXTURE_WIDTH:                        TextureParameterName read new TextureParameterName($1000);
     public static property TEXTURE_HEIGHT:                       TextureParameterName read new TextureParameterName($1001);
-    public static property TEXTURE_COMPONENTS:                   TextureParameterName read new TextureParameterName($1003);
     public static property TEXTURE_INTERNAL_FORMAT:              TextureParameterName read new TextureParameterName($1003);
+    public static property TEXTURE_COMPONENTS:                   TextureParameterName read new TextureParameterName($1003);
     public static property TEXTURE_BORDER_COLOR:                 TextureParameterName read new TextureParameterName($1004);
     public static property TEXTURE_BORDER_COLOR_NV:              TextureParameterName read new TextureParameterName($1004);
     public static property TEXTURE_BORDER:                       TextureParameterName read new TextureParameterName($1005);
@@ -8952,8 +8999,8 @@ type
     begin
       if self.val = UInt32($1000) then Result := 'TEXTURE_WIDTH' else
       if self.val = UInt32($1001) then Result := 'TEXTURE_HEIGHT' else
-      if self.val = UInt32($1003) then Result := 'TEXTURE_COMPONENTS' else
       if self.val = UInt32($1003) then Result := 'TEXTURE_INTERNAL_FORMAT' else
+      if self.val = UInt32($1003) then Result := 'TEXTURE_COMPONENTS' else
       if self.val = UInt32($1004) then Result := 'TEXTURE_BORDER_COLOR' else
       if self.val = UInt32($1004) then Result := 'TEXTURE_BORDER_COLOR_NV' else
       if self.val = UInt32($1005) then Result := 'TEXTURE_BORDER' else
@@ -9516,6 +9563,8 @@ type
     public static function operator+(f1,f2: UseProgramStageMask) := new UseProgramStageMask(f1.val or f2.val);
     public static function operator or(f1,f2: UseProgramStageMask) := f1+f2;
     
+    public static procedure operator+=(var f1: UseProgramStageMask; f2: UseProgramStageMask) := f1 := f1+f2;
+    
     public property HAS_FLAG_VERTEX_SHADER_BIT:              boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_VERTEX_SHADER_BIT_EXT:          boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_FRAGMENT_SHADER_BIT:            boolean read self.val and $0002 <> 0;
@@ -9561,6 +9610,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'UseProgramStageMask[{self.val}]';
     end;
     
@@ -10819,6 +10870,8 @@ type
     public static function operator+(f1,f2: TextureStorageMaskAMD) := new TextureStorageMaskAMD(f1.val or f2.val);
     public static function operator or(f1,f2: TextureStorageMaskAMD) := f1+f2;
     
+    public static procedure operator+=(var f1: TextureStorageMaskAMD; f2: TextureStorageMaskAMD) := f1 := f1+f2;
+    
     public property HAS_FLAG_TEXTURE_STORAGE_SPARSE_BIT_AMD: boolean read self.val and $0001 <> 0;
     
     public function ToString: string; override;
@@ -10830,6 +10883,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'TextureStorageMaskAMD[{self.val}]';
     end;
     
@@ -11181,19 +11236,22 @@ type
     public static function operator+(f1,f2: PerfQueryCapFlagsINTEL) := new PerfQueryCapFlagsINTEL(f1.val or f2.val);
     public static function operator or(f1,f2: PerfQueryCapFlagsINTEL) := f1+f2;
     
+    public static procedure operator+=(var f1: PerfQueryCapFlagsINTEL; f2: PerfQueryCapFlagsINTEL) := f1 := f1+f2;
+    
     public property ANY_FLAGS: boolean read self.val<>0;
     public property HAS_FLAG_PERFQUERY_GLOBAL_CONTEXT_INTEL: boolean read self.val and $0001 <> 0;
     
     public function ToString: string; override;
     begin
       var res := new StringBuilder;
-      if self.val and UInt32($0000) = UInt32($0000) then res += 'PERFQUERY_SINGLE_CONTEXT_INTEL+';
       if self.val and UInt32($0001) = UInt32($0001) then res += 'PERFQUERY_GLOBAL_CONTEXT_INTEL+';
       if res.Length<>0 then
       begin
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'PerfQueryCapFlagsINTEL[{self.val}]';
     end;
     
@@ -11481,14 +11539,14 @@ type
     public val: UInt32;
     public constructor(val: UInt32) := self.val := val;
     
-    public static property SAMPLE_LOCATION_ARB:              GetMultisamplePNameNV read new GetMultisamplePNameNV($8E50);
     public static property SAMPLE_POSITION:                  GetMultisamplePNameNV read new GetMultisamplePNameNV($8E50);
+    public static property SAMPLE_LOCATION_ARB:              GetMultisamplePNameNV read new GetMultisamplePNameNV($8E50);
     public static property PROGRAMMABLE_SAMPLE_LOCATION_ARB: GetMultisamplePNameNV read new GetMultisamplePNameNV($9341);
     
     public function ToString: string; override;
     begin
-      if self.val = UInt32($8E50) then Result := 'SAMPLE_LOCATION_ARB' else
       if self.val = UInt32($8E50) then Result := 'SAMPLE_POSITION' else
+      if self.val = UInt32($8E50) then Result := 'SAMPLE_LOCATION_ARB' else
       if self.val = UInt32($9341) then Result := 'PROGRAMMABLE_SAMPLE_LOCATION_ARB' else
         Result := $'GetMultisamplePNameNV[{self.val}]';
     end;
@@ -11505,6 +11563,8 @@ type
     public static function operator+(f1,f2: GPUDisplayDeviceFlagsNV) := new GPUDisplayDeviceFlagsNV(f1.val or f2.val);
     public static function operator or(f1,f2: GPUDisplayDeviceFlagsNV) := f1+f2;
     
+    public static procedure operator+=(var f1: GPUDisplayDeviceFlagsNV; f2: GPUDisplayDeviceFlagsNV) := f1 := f1+f2;
+    
     public property HAS_FLAG_ATTACHED_TO_DESKTOP: boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_PRIMARY_DEVICE:      boolean read self.val and $0004 <> 0;
     
@@ -11518,6 +11578,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'GPUDisplayDeviceFlagsNV[{self.val}]';
     end;
     
@@ -11875,6 +11937,8 @@ type
     public static function operator+(f1,f2: FfdMaskSGIX) := new FfdMaskSGIX(f1.val or f2.val);
     public static function operator or(f1,f2: FfdMaskSGIX) := f1+f2;
     
+    public static procedure operator+=(var f1: FfdMaskSGIX; f2: FfdMaskSGIX) := f1 := f1+f2;
+    
     public property HAS_FLAG_TEXTURE_DEFORMATION_BIT_SGIX:  boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_GEOMETRY_DEFORMATION_BIT_SGIX: boolean read self.val and $0002 <> 0;
     
@@ -11888,6 +11952,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'FfdMaskSGIX[{self.val}]';
     end;
     

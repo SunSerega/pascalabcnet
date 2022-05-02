@@ -194,15 +194,15 @@ type
     
     public static property FALSE:        Bool read new Bool($0000);
     public static property NON_BLOCKING: Bool read new Bool($0000);
-    public static property BLOCKING:     Bool read new Bool($0001);
     public static property TRUE:         Bool read new Bool($0001);
+    public static property BLOCKING:     Bool read new Bool($0001);
     
     public function ToString: string; override;
     begin
       if self.val = UInt32($0000) then Result := 'FALSE' else
       if self.val = UInt32($0000) then Result := 'NON_BLOCKING' else
-      if self.val = UInt32($0001) then Result := 'BLOCKING' else
       if self.val = UInt32($0001) then Result := 'TRUE' else
+      if self.val = UInt32($0001) then Result := 'BLOCKING' else
         Result := $'Bool[{self.val}]';
     end;
     
@@ -458,6 +458,8 @@ type
     public static function operator+(f1,f2: CommandQueueProperties) := new CommandQueueProperties(f1.val or f2.val);
     public static function operator or(f1,f2: CommandQueueProperties) := f1+f2;
     
+    public static procedure operator+=(var f1: CommandQueueProperties; f2: CommandQueueProperties) := f1 := f1+f2;
+    
     public property ANY_FLAGS: boolean read self.val<>0;
     public property HAS_FLAG_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE:  boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_QUEUE_PROFILING_ENABLE:               boolean read self.val and $0002 <> 0;
@@ -469,7 +471,6 @@ type
     public function ToString: string; override;
     begin
       var res := new StringBuilder;
-      if self.val and UInt64($0000) = UInt64($0000) then res += 'NONE+';
       if self.val and UInt64($0001) = UInt64($0001) then res += 'QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE+';
       if self.val and UInt64($0002) = UInt64($0002) then res += 'QUEUE_PROFILING_ENABLE+';
       if self.val and UInt64($0004) = UInt64($0004) then res += 'QUEUE_ON_DEVICE+';
@@ -481,6 +482,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'CommandQueueProperties[{self.val}]';
     end;
     
@@ -781,6 +784,8 @@ type
     public static function operator+(f1,f2: DeviceAffinityDomain) := new DeviceAffinityDomain(f1.val or f2.val);
     public static function operator or(f1,f2: DeviceAffinityDomain) := f1+f2;
     
+    public static procedure operator+=(var f1: DeviceAffinityDomain; f2: DeviceAffinityDomain) := f1 := f1+f2;
+    
     public property HAS_FLAG_DEVICE_AFFINITY_DOMAIN_NUMA:               boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_DEVICE_AFFINITY_DOMAIN_L4_CACHE:           boolean read self.val and $0002 <> 0;
     public property HAS_FLAG_DEVICE_AFFINITY_DOMAIN_L3_CACHE:           boolean read self.val and $0004 <> 0;
@@ -802,6 +807,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'DeviceAffinityDomain[{self.val}]';
     end;
     
@@ -817,6 +824,8 @@ type
     public static function operator+(f1,f2: DeviceExecCapabilities) := new DeviceExecCapabilities(f1.val or f2.val);
     public static function operator or(f1,f2: DeviceExecCapabilities) := f1+f2;
     
+    public static procedure operator+=(var f1: DeviceExecCapabilities; f2: DeviceExecCapabilities) := f1 := f1+f2;
+    
     public property HAS_FLAG_EXEC_KERNEL:        boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_EXEC_NATIVE_KERNEL: boolean read self.val and $0002 <> 0;
     
@@ -830,6 +839,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'DeviceExecCapabilities[{self.val}]';
     end;
     
@@ -850,6 +861,8 @@ type
     
     public static function operator+(f1,f2: DeviceFPConfig) := new DeviceFPConfig(f1.val or f2.val);
     public static function operator or(f1,f2: DeviceFPConfig) := f1+f2;
+    
+    public static procedure operator+=(var f1: DeviceFPConfig; f2: DeviceFPConfig) := f1 := f1+f2;
     
     public property HAS_FLAG_FP_DENORM:                        boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_FP_INF_NAN:                       boolean read self.val and $0002 <> 0;
@@ -876,6 +889,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'DeviceFPConfig[{self.val}]';
     end;
     
@@ -927,8 +942,8 @@ type
     public static property DEVICE_AVAILABLE:                                                     DeviceInfo read new DeviceInfo($1027);
     public static property DEVICE_COMPILER_AVAILABLE:                                            DeviceInfo read new DeviceInfo($1028);
     public static property DEVICE_EXECUTION_CAPABILITIES:                                        DeviceInfo read new DeviceInfo($1029);
-    public static property DEVICE_QUEUE_ON_HOST_PROPERTIES:                                      DeviceInfo read new DeviceInfo($102A);
     public static property DEVICE_QUEUE_PROPERTIES:                                              DeviceInfo read new DeviceInfo($102A);
+    public static property DEVICE_QUEUE_ON_HOST_PROPERTIES:                                      DeviceInfo read new DeviceInfo($102A);
     public static property DEVICE_NAME:                                                          DeviceInfo read new DeviceInfo($102B);
     public static property DEVICE_VENDOR:                                                        DeviceInfo read new DeviceInfo($102C);
     public static property DRIVER_VERSION:                                                       DeviceInfo read new DeviceInfo($102D);
@@ -983,15 +998,15 @@ type
     public static property DEVICE_IL_VERSION_KHR:                                                DeviceInfo read new DeviceInfo($105B);
     public static property DEVICE_MAX_NUM_SUB_GROUPS:                                            DeviceInfo read new DeviceInfo($105C);
     public static property DEVICE_SUB_GROUP_INDEPENDENT_FORWARD_PROGRESS:                        DeviceInfo read new DeviceInfo($105D);
-    public static property DEVICE_NUMERIC_VERSION:                                               DeviceInfo read new DeviceInfo($105E);
     public static property DEVICE_NUMERIC_VERSION_KHR:                                           DeviceInfo read new DeviceInfo($105E);
+    public static property DEVICE_NUMERIC_VERSION:                                               DeviceInfo read new DeviceInfo($105E);
     public static property DEVICE_OPENCL_C_NUMERIC_VERSION_KHR:                                  DeviceInfo read new DeviceInfo($105F);
-    public static property DEVICE_EXTENSIONS_WITH_VERSION:                                       DeviceInfo read new DeviceInfo($1060);
     public static property DEVICE_EXTENSIONS_WITH_VERSION_KHR:                                   DeviceInfo read new DeviceInfo($1060);
-    public static property DEVICE_ILS_WITH_VERSION:                                              DeviceInfo read new DeviceInfo($1061);
+    public static property DEVICE_EXTENSIONS_WITH_VERSION:                                       DeviceInfo read new DeviceInfo($1060);
     public static property DEVICE_ILS_WITH_VERSION_KHR:                                          DeviceInfo read new DeviceInfo($1061);
-    public static property DEVICE_BUILT_IN_KERNELS_WITH_VERSION:                                 DeviceInfo read new DeviceInfo($1062);
+    public static property DEVICE_ILS_WITH_VERSION:                                              DeviceInfo read new DeviceInfo($1061);
     public static property DEVICE_BUILT_IN_KERNELS_WITH_VERSION_KHR:                             DeviceInfo read new DeviceInfo($1062);
+    public static property DEVICE_BUILT_IN_KERNELS_WITH_VERSION:                                 DeviceInfo read new DeviceInfo($1062);
     public static property DEVICE_ATOMIC_MEMORY_CAPABILITIES:                                    DeviceInfo read new DeviceInfo($1063);
     public static property DEVICE_ATOMIC_FENCE_CAPABILITIES:                                     DeviceInfo read new DeviceInfo($1064);
     public static property DEVICE_NON_UNIFORM_WORK_GROUP_SUPPORT:                                DeviceInfo read new DeviceInfo($1065);
@@ -1132,8 +1147,8 @@ type
       if self.val = UInt32($1027) then Result := 'DEVICE_AVAILABLE' else
       if self.val = UInt32($1028) then Result := 'DEVICE_COMPILER_AVAILABLE' else
       if self.val = UInt32($1029) then Result := 'DEVICE_EXECUTION_CAPABILITIES' else
-      if self.val = UInt32($102A) then Result := 'DEVICE_QUEUE_ON_HOST_PROPERTIES' else
       if self.val = UInt32($102A) then Result := 'DEVICE_QUEUE_PROPERTIES' else
+      if self.val = UInt32($102A) then Result := 'DEVICE_QUEUE_ON_HOST_PROPERTIES' else
       if self.val = UInt32($102B) then Result := 'DEVICE_NAME' else
       if self.val = UInt32($102C) then Result := 'DEVICE_VENDOR' else
       if self.val = UInt32($102D) then Result := 'DRIVER_VERSION' else
@@ -1188,15 +1203,15 @@ type
       if self.val = UInt32($105B) then Result := 'DEVICE_IL_VERSION_KHR' else
       if self.val = UInt32($105C) then Result := 'DEVICE_MAX_NUM_SUB_GROUPS' else
       if self.val = UInt32($105D) then Result := 'DEVICE_SUB_GROUP_INDEPENDENT_FORWARD_PROGRESS' else
-      if self.val = UInt32($105E) then Result := 'DEVICE_NUMERIC_VERSION' else
       if self.val = UInt32($105E) then Result := 'DEVICE_NUMERIC_VERSION_KHR' else
+      if self.val = UInt32($105E) then Result := 'DEVICE_NUMERIC_VERSION' else
       if self.val = UInt32($105F) then Result := 'DEVICE_OPENCL_C_NUMERIC_VERSION_KHR' else
-      if self.val = UInt32($1060) then Result := 'DEVICE_EXTENSIONS_WITH_VERSION' else
       if self.val = UInt32($1060) then Result := 'DEVICE_EXTENSIONS_WITH_VERSION_KHR' else
-      if self.val = UInt32($1061) then Result := 'DEVICE_ILS_WITH_VERSION' else
+      if self.val = UInt32($1060) then Result := 'DEVICE_EXTENSIONS_WITH_VERSION' else
       if self.val = UInt32($1061) then Result := 'DEVICE_ILS_WITH_VERSION_KHR' else
-      if self.val = UInt32($1062) then Result := 'DEVICE_BUILT_IN_KERNELS_WITH_VERSION' else
+      if self.val = UInt32($1061) then Result := 'DEVICE_ILS_WITH_VERSION' else
       if self.val = UInt32($1062) then Result := 'DEVICE_BUILT_IN_KERNELS_WITH_VERSION_KHR' else
+      if self.val = UInt32($1062) then Result := 'DEVICE_BUILT_IN_KERNELS_WITH_VERSION' else
       if self.val = UInt32($1063) then Result := 'DEVICE_ATOMIC_MEMORY_CAPABILITIES' else
       if self.val = UInt32($1064) then Result := 'DEVICE_ATOMIC_FENCE_CAPABILITIES' else
       if self.val = UInt32($1065) then Result := 'DEVICE_NON_UNIFORM_WORK_GROUP_SUPPORT' else
@@ -1356,8 +1371,8 @@ type
     public val: UInt64;
     public constructor(val: UInt64) := self.val := val;
     
-    public static property PARTITION_BY_COUNTS_LIST_END_EXT:        DevicePartitionPropertyExt read new DevicePartitionPropertyExt($0000);
     public static property PROPERTIES_LIST_END_EXT:                 DevicePartitionPropertyExt read new DevicePartitionPropertyExt($0000);
+    public static property PARTITION_BY_COUNTS_LIST_END_EXT:        DevicePartitionPropertyExt read new DevicePartitionPropertyExt($0000);
     public static property AFFINITY_DOMAIN_L1_CACHE_EXT:            DevicePartitionPropertyExt read new DevicePartitionPropertyExt($0001);
     public static property PARTITION_BY_NAMES_LIST_END_EXT:         DevicePartitionPropertyExt read new DevicePartitionPropertyExt(-1);
     public static property AFFINITY_DOMAIN_L2_CACHE_EXT:            DevicePartitionPropertyExt read new DevicePartitionPropertyExt($0002);
@@ -1372,8 +1387,8 @@ type
     
     public function ToString: string; override;
     begin
-      if self.val = UInt64($0000) then Result := 'PARTITION_BY_COUNTS_LIST_END_EXT' else
       if self.val = UInt64($0000) then Result := 'PROPERTIES_LIST_END_EXT' else
+      if self.val = UInt64($0000) then Result := 'PARTITION_BY_COUNTS_LIST_END_EXT' else
       if self.val = UInt64($0001) then Result := 'AFFINITY_DOMAIN_L1_CACHE_EXT' else
       if self.val = UInt64(-1) then Result := 'PARTITION_BY_NAMES_LIST_END_EXT' else
       if self.val = UInt64($0002) then Result := 'AFFINITY_DOMAIN_L2_CACHE_EXT' else
@@ -1402,6 +1417,8 @@ type
     public static function operator+(f1,f2: DeviceSVMCapabilities) := new DeviceSVMCapabilities(f1.val or f2.val);
     public static function operator or(f1,f2: DeviceSVMCapabilities) := f1+f2;
     
+    public static procedure operator+=(var f1: DeviceSVMCapabilities; f2: DeviceSVMCapabilities) := f1 := f1+f2;
+    
     public property HAS_FLAG_DEVICE_SVM_COARSE_GRAIN_BUFFER: boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_DEVICE_SVM_FINE_GRAIN_BUFFER:   boolean read self.val and $0002 <> 0;
     public property HAS_FLAG_DEVICE_SVM_FINE_GRAIN_SYSTEM:   boolean read self.val and $0004 <> 0;
@@ -1419,6 +1436,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'DeviceSVMCapabilities[{self.val}]';
     end;
     
@@ -1437,6 +1456,8 @@ type
     
     public static function operator+(f1,f2: DeviceType) := new DeviceType(f1.val or f2.val);
     public static function operator or(f1,f2: DeviceType) := f1+f2;
+    
+    public static procedure operator+=(var f1: DeviceType; f2: DeviceType) := f1 := f1+f2;
     
     public property HAS_FLAG_DEVICE_TYPE_DEFAULT:     boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_DEVICE_TYPE_CPU:         boolean read self.val and $0002 <> 0;
@@ -1459,6 +1480,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'DeviceType[{self.val}]';
     end;
     
@@ -2033,13 +2056,31 @@ type
     public static property KERNEL_ARG_TYPE_VOLATILE: KernelArgTypeQualifier read new KernelArgTypeQualifier($0004);
     public static property KERNEL_ARG_TYPE_PIPE:     KernelArgTypeQualifier read new KernelArgTypeQualifier($0008);
     
+    public static function operator+(f1,f2: KernelArgTypeQualifier) := new KernelArgTypeQualifier(f1.val or f2.val);
+    public static function operator or(f1,f2: KernelArgTypeQualifier) := f1+f2;
+    
+    public static procedure operator+=(var f1: KernelArgTypeQualifier; f2: KernelArgTypeQualifier) := f1 := f1+f2;
+    
+    public property ANY_FLAGS: boolean read self.val<>0;
+    public property HAS_FLAG_KERNEL_ARG_TYPE_CONST:    boolean read self.val and $0001 <> 0;
+    public property HAS_FLAG_KERNEL_ARG_TYPE_RESTRICT: boolean read self.val and $0002 <> 0;
+    public property HAS_FLAG_KERNEL_ARG_TYPE_VOLATILE: boolean read self.val and $0004 <> 0;
+    public property HAS_FLAG_KERNEL_ARG_TYPE_PIPE:     boolean read self.val and $0008 <> 0;
+    
     public function ToString: string; override;
     begin
-      if self.val = UInt64($0000) then Result := 'KERNEL_ARG_TYPE_NONE' else
-      if self.val = UInt64($0001) then Result := 'KERNEL_ARG_TYPE_CONST' else
-      if self.val = UInt64($0002) then Result := 'KERNEL_ARG_TYPE_RESTRICT' else
-      if self.val = UInt64($0004) then Result := 'KERNEL_ARG_TYPE_VOLATILE' else
-      if self.val = UInt64($0008) then Result := 'KERNEL_ARG_TYPE_PIPE' else
+      var res := new StringBuilder;
+      if self.val and UInt64($0001) = UInt64($0001) then res += 'KERNEL_ARG_TYPE_CONST+';
+      if self.val and UInt64($0002) = UInt64($0002) then res += 'KERNEL_ARG_TYPE_RESTRICT+';
+      if self.val and UInt64($0004) = UInt64($0004) then res += 'KERNEL_ARG_TYPE_VOLATILE+';
+      if self.val and UInt64($0008) = UInt64($0008) then res += 'KERNEL_ARG_TYPE_PIPE+';
+      if res.Length<>0 then
+      begin
+        res.Length -= 1;
+        Result := res.ToString;
+      end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'KernelArgTypeQualifier[{self.val}]';
     end;
     
@@ -2192,6 +2233,8 @@ type
     public static function operator+(f1,f2: MapFlags) := new MapFlags(f1.val or f2.val);
     public static function operator or(f1,f2: MapFlags) := f1+f2;
     
+    public static procedure operator+=(var f1: MapFlags; f2: MapFlags) := f1 := f1+f2;
+    
     public property HAS_FLAG_MAP_READ:                    boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_MAP_WRITE:                   boolean read self.val and $0002 <> 0;
     public property HAS_FLAG_MAP_WRITE_INVALIDATE_REGION: boolean read self.val and $0004 <> 0;
@@ -2207,6 +2250,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'MapFlags[{self.val}]';
     end;
     
@@ -2247,6 +2292,8 @@ type
     
     public static function operator+(f1,f2: MemFlags) := new MemFlags(f1.val or f2.val);
     public static function operator or(f1,f2: MemFlags) := f1+f2;
+    
+    public static procedure operator+=(var f1: MemFlags; f2: MemFlags) := f1 := f1+f2;
     
     public property HAS_FLAG_MEM_READ_WRITE:                      boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_MEM_WRITE_ONLY:                      boolean read self.val and $0002 <> 0;
@@ -2313,6 +2360,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'MemFlags[{self.val}]';
     end;
     
@@ -2378,6 +2427,8 @@ type
     public static function operator+(f1,f2: MemMigrationFlags) := new MemMigrationFlags(f1.val or f2.val);
     public static function operator or(f1,f2: MemMigrationFlags) := f1+f2;
     
+    public static procedure operator+=(var f1: MemMigrationFlags; f2: MemMigrationFlags) := f1 := f1+f2;
+    
     public property HAS_FLAG_MIGRATE_MEM_OBJECT_HOST:              boolean read self.val and $0001 <> 0;
     public property HAS_FLAG_MIGRATE_MEM_OBJECT_CONTENT_UNDEFINED: boolean read self.val and $0002 <> 0;
     
@@ -2391,6 +2442,8 @@ type
         res.Length -= 1;
         Result := res.ToString;
       end else
+      if self.val=0 then
+        Result := 'NONE' else
         Result := $'MemMigrationFlags[{self.val}]';
     end;
     
@@ -2518,10 +2571,10 @@ type
     public static property PLATFORM_VENDOR:                                  PlatformInfo read new PlatformInfo($0903);
     public static property PLATFORM_EXTENSIONS:                              PlatformInfo read new PlatformInfo($0904);
     public static property PLATFORM_HOST_TIMER_RESOLUTION:                   PlatformInfo read new PlatformInfo($0905);
-    public static property PLATFORM_NUMERIC_VERSION:                         PlatformInfo read new PlatformInfo($0906);
     public static property PLATFORM_NUMERIC_VERSION_KHR:                     PlatformInfo read new PlatformInfo($0906);
-    public static property PLATFORM_EXTENSIONS_WITH_VERSION:                 PlatformInfo read new PlatformInfo($0907);
+    public static property PLATFORM_NUMERIC_VERSION:                         PlatformInfo read new PlatformInfo($0906);
     public static property PLATFORM_EXTENSIONS_WITH_VERSION_KHR:             PlatformInfo read new PlatformInfo($0907);
+    public static property PLATFORM_EXTENSIONS_WITH_VERSION:                 PlatformInfo read new PlatformInfo($0907);
     public static property PLATFORM_ICD_SUFFIX_KHR:                          PlatformInfo read new PlatformInfo($0920);
     public static property PLATFORM_SEMAPHORE_TYPES_KHR:                     PlatformInfo read new PlatformInfo($2036);
     public static property PLATFORM_SEMAPHORE_IMPORT_HANDLE_TYPES_KHR:       PlatformInfo read new PlatformInfo($2037);
@@ -2536,10 +2589,10 @@ type
       if self.val = UInt32($0903) then Result := 'PLATFORM_VENDOR' else
       if self.val = UInt32($0904) then Result := 'PLATFORM_EXTENSIONS' else
       if self.val = UInt32($0905) then Result := 'PLATFORM_HOST_TIMER_RESOLUTION' else
-      if self.val = UInt32($0906) then Result := 'PLATFORM_NUMERIC_VERSION' else
       if self.val = UInt32($0906) then Result := 'PLATFORM_NUMERIC_VERSION_KHR' else
-      if self.val = UInt32($0907) then Result := 'PLATFORM_EXTENSIONS_WITH_VERSION' else
+      if self.val = UInt32($0906) then Result := 'PLATFORM_NUMERIC_VERSION' else
       if self.val = UInt32($0907) then Result := 'PLATFORM_EXTENSIONS_WITH_VERSION_KHR' else
+      if self.val = UInt32($0907) then Result := 'PLATFORM_EXTENSIONS_WITH_VERSION' else
       if self.val = UInt32($0920) then Result := 'PLATFORM_ICD_SUFFIX_KHR' else
       if self.val = UInt32($2036) then Result := 'PLATFORM_SEMAPHORE_TYPES_KHR' else
       if self.val = UInt32($2037) then Result := 'PLATFORM_SEMAPHORE_IMPORT_HANDLE_TYPES_KHR' else
@@ -14604,6 +14657,199 @@ type
     external 'opencl' name 'clGetCommandBufferInfoKHR';
     public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function GetCommandBufferInfoKHR(command_buffer: cl_command_buffer; param_name: CommandBufferInfoKhr; param_value_size: UIntPtr; param_value: IntPtr; param_value_size_ret: IntPtr): ErrorCode :=
     z_GetCommandBufferInfoKHR_ovr_2(command_buffer, param_name, param_value_size, param_value, param_value_size_ret);
+    
+  end;
+  
+  [PCUNotRestore]
+  [System.Security.SuppressUnmanagedCodeSecurity]
+  clProgramScopeHostPipeINTEL = static class
+    public const _ExtStr = 'intel_program_scope_host_pipe';
+    
+    private static function z_EnqueueReadHostPipeINTEL_ovr_0(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; var &event: cl_event): ErrorCode;
+    external 'opencl' name 'clEnqueueReadHostPipeINTEL';
+    private static function z_EnqueueReadHostPipeINTEL_ovr_0_anh0000000010(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; var &event: cl_event): ErrorCode;
+    external 'opencl' name 'clEnqueueReadHostPipeINTEL';
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: array of cl_event; var &event: cl_event): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        if (event_wait_list<>nil) and (event_wait_list.Length<>0) then
+          Result := z_EnqueueReadHostPipeINTEL_ovr_0(command_queue, &program, par_3_str_ptr, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list[0], &event) else
+          Result := z_EnqueueReadHostPipeINTEL_ovr_0_anh0000000010(command_queue, &program, par_3_str_ptr, blocking_read, ptr, size, num_events_in_wait_list, IntPtr.Zero, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    private static function z_EnqueueReadHostPipeINTEL_ovr_1(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; &event: IntPtr): ErrorCode;
+    external 'opencl' name 'clEnqueueReadHostPipeINTEL';
+    private static function z_EnqueueReadHostPipeINTEL_ovr_1_anh0000000010(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; &event: IntPtr): ErrorCode;
+    external 'opencl' name 'clEnqueueReadHostPipeINTEL';
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: array of cl_event; &event: IntPtr): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        if (event_wait_list<>nil) and (event_wait_list.Length<>0) then
+          Result := z_EnqueueReadHostPipeINTEL_ovr_1(command_queue, &program, par_3_str_ptr, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list[0], &event) else
+          Result := z_EnqueueReadHostPipeINTEL_ovr_1_anh0000000010(command_queue, &program, par_3_str_ptr, blocking_read, ptr, size, num_events_in_wait_list, IntPtr.Zero, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; var &event: cl_event): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        Result := z_EnqueueReadHostPipeINTEL_ovr_0(command_queue, &program, par_3_str_ptr, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; &event: IntPtr): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        Result := z_EnqueueReadHostPipeINTEL_ovr_1(command_queue, &program, par_3_str_ptr, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    private static function z_EnqueueReadHostPipeINTEL_ovr_4(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; var &event: cl_event): ErrorCode;
+    external 'opencl' name 'clEnqueueReadHostPipeINTEL';
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; var &event: cl_event): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        Result := z_EnqueueReadHostPipeINTEL_ovr_4(command_queue, &program, par_3_str_ptr, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    private static function z_EnqueueReadHostPipeINTEL_ovr_5(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; &event: IntPtr): ErrorCode;
+    external 'opencl' name 'clEnqueueReadHostPipeINTEL';
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; &event: IntPtr): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        Result := z_EnqueueReadHostPipeINTEL_ovr_5(command_queue, &program, par_3_str_ptr, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: array of cl_event; var &event: cl_event): ErrorCode :=
+    if (event_wait_list<>nil) and (event_wait_list.Length<>0) then
+      z_EnqueueReadHostPipeINTEL_ovr_0(command_queue, &program, pipe_symbol, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list[0], &event) else
+      z_EnqueueReadHostPipeINTEL_ovr_0_anh0000000010(command_queue, &program, pipe_symbol, blocking_read, ptr, size, num_events_in_wait_list, IntPtr.Zero, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: array of cl_event; &event: IntPtr): ErrorCode :=
+    if (event_wait_list<>nil) and (event_wait_list.Length<>0) then
+      z_EnqueueReadHostPipeINTEL_ovr_1(command_queue, &program, pipe_symbol, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list[0], &event) else
+      z_EnqueueReadHostPipeINTEL_ovr_1_anh0000000010(command_queue, &program, pipe_symbol, blocking_read, ptr, size, num_events_in_wait_list, IntPtr.Zero, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; var &event: cl_event): ErrorCode :=
+    z_EnqueueReadHostPipeINTEL_ovr_0(command_queue, &program, pipe_symbol, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; &event: IntPtr): ErrorCode :=
+    z_EnqueueReadHostPipeINTEL_ovr_1(command_queue, &program, pipe_symbol, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; var &event: cl_event): ErrorCode :=
+    z_EnqueueReadHostPipeINTEL_ovr_4(command_queue, &program, pipe_symbol, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueReadHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_read: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; &event: IntPtr): ErrorCode :=
+    z_EnqueueReadHostPipeINTEL_ovr_5(command_queue, &program, pipe_symbol, blocking_read, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+    
+    private static function z_EnqueueWriteHostPipeINTEL_ovr_0(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; var &event: cl_event): ErrorCode;
+    external 'opencl' name 'clEnqueueWriteHostPipeINTEL';
+    private static function z_EnqueueWriteHostPipeINTEL_ovr_0_anh0000000010(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; var &event: cl_event): ErrorCode;
+    external 'opencl' name 'clEnqueueWriteHostPipeINTEL';
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: array of cl_event; var &event: cl_event): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        if (event_wait_list<>nil) and (event_wait_list.Length<>0) then
+          Result := z_EnqueueWriteHostPipeINTEL_ovr_0(command_queue, &program, par_3_str_ptr, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list[0], &event) else
+          Result := z_EnqueueWriteHostPipeINTEL_ovr_0_anh0000000010(command_queue, &program, par_3_str_ptr, blocking_write, ptr, size, num_events_in_wait_list, IntPtr.Zero, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    private static function z_EnqueueWriteHostPipeINTEL_ovr_1(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; &event: IntPtr): ErrorCode;
+    external 'opencl' name 'clEnqueueWriteHostPipeINTEL';
+    private static function z_EnqueueWriteHostPipeINTEL_ovr_1_anh0000000010(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; &event: IntPtr): ErrorCode;
+    external 'opencl' name 'clEnqueueWriteHostPipeINTEL';
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: array of cl_event; &event: IntPtr): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        if (event_wait_list<>nil) and (event_wait_list.Length<>0) then
+          Result := z_EnqueueWriteHostPipeINTEL_ovr_1(command_queue, &program, par_3_str_ptr, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list[0], &event) else
+          Result := z_EnqueueWriteHostPipeINTEL_ovr_1_anh0000000010(command_queue, &program, par_3_str_ptr, blocking_write, ptr, size, num_events_in_wait_list, IntPtr.Zero, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; var &event: cl_event): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        Result := z_EnqueueWriteHostPipeINTEL_ovr_0(command_queue, &program, par_3_str_ptr, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; &event: IntPtr): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        Result := z_EnqueueWriteHostPipeINTEL_ovr_1(command_queue, &program, par_3_str_ptr, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    private static function z_EnqueueWriteHostPipeINTEL_ovr_4(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; var &event: cl_event): ErrorCode;
+    external 'opencl' name 'clEnqueueWriteHostPipeINTEL';
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; var &event: cl_event): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        Result := z_EnqueueWriteHostPipeINTEL_ovr_4(command_queue, &program, par_3_str_ptr, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    private static function z_EnqueueWriteHostPipeINTEL_ovr_5(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; &event: IntPtr): ErrorCode;
+    external 'opencl' name 'clEnqueueWriteHostPipeINTEL';
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: string; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; &event: IntPtr): ErrorCode;
+    begin
+      var par_3_str_ptr: IntPtr;
+      try
+        par_3_str_ptr := Marshal.StringToHGlobalAnsi(pipe_symbol);
+        Result := z_EnqueueWriteHostPipeINTEL_ovr_5(command_queue, &program, par_3_str_ptr, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+      finally
+        Marshal.FreeHGlobal(par_3_str_ptr);
+      end;
+    end;
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: array of cl_event; var &event: cl_event): ErrorCode :=
+    if (event_wait_list<>nil) and (event_wait_list.Length<>0) then
+      z_EnqueueWriteHostPipeINTEL_ovr_0(command_queue, &program, pipe_symbol, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list[0], &event) else
+      z_EnqueueWriteHostPipeINTEL_ovr_0_anh0000000010(command_queue, &program, pipe_symbol, blocking_write, ptr, size, num_events_in_wait_list, IntPtr.Zero, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: array of cl_event; &event: IntPtr): ErrorCode :=
+    if (event_wait_list<>nil) and (event_wait_list.Length<>0) then
+      z_EnqueueWriteHostPipeINTEL_ovr_1(command_queue, &program, pipe_symbol, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list[0], &event) else
+      z_EnqueueWriteHostPipeINTEL_ovr_1_anh0000000010(command_queue, &program, pipe_symbol, blocking_write, ptr, size, num_events_in_wait_list, IntPtr.Zero, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; var &event: cl_event): ErrorCode :=
+    z_EnqueueWriteHostPipeINTEL_ovr_0(command_queue, &program, pipe_symbol, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; var event_wait_list: cl_event; &event: IntPtr): ErrorCode :=
+    z_EnqueueWriteHostPipeINTEL_ovr_1(command_queue, &program, pipe_symbol, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; var &event: cl_event): ErrorCode :=
+    z_EnqueueWriteHostPipeINTEL_ovr_4(command_queue, &program, pipe_symbol, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list, &event);
+    public [MethodImpl(MethodImplOptions.AggressiveInlining)] static function EnqueueWriteHostPipeINTEL(command_queue: cl_command_queue; &program: cl_program; pipe_symbol: IntPtr; blocking_write: Bool; ptr: IntPtr; size: UIntPtr; num_events_in_wait_list: UInt32; event_wait_list: IntPtr; &event: IntPtr): ErrorCode :=
+    z_EnqueueWriteHostPipeINTEL_ovr_5(command_queue, &program, pipe_symbol, blocking_write, ptr, size, num_events_in_wait_list, event_wait_list, &event);
     
   end;
   

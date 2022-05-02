@@ -13,7 +13,7 @@ uses OpenGLABC;
 
 uses Common in '..\Common';
 
-{$apptype windows} // убираем консоль
+{$apptype windows} // Убираем консоль
 
 const dy = -Sin(Pi / 6) / 2;
 
