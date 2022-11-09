@@ -3882,6 +3882,29 @@ namespace PascalABCCompiler.TreeConverter
 
             }
 
+            // Секция where интерфейса converted_type обрабатывается ещё до вызова данного визитора
+            // Но код остального компилятора ожидает что если тип реализует интерфейс, то в список реализации уже добавлены все зависимые интерфейсы
+            // Поэтому если шаблонный параметр реализует converted_type, которому только что добавили зависимости ("_class_definition.class_parents")
+            // То надо этому шаблонному параметру добавить все те же зависимости
+            if (_class_definition.keyword==PascalABCCompiler.SyntaxTree.class_keyword.Interface)
+                foreach (common_type_node t in converted_type.generic_params)
+                {
+                    var refs = new List<common_generic_instance_type_node>(t.ImplementingInterfaces.Count);
+                    t.ImplementingInterfaces.RemoveAll(n =>
+                    {
+                        var intr = n as common_generic_instance_type_node;
+                        if (intr == null) return false;
+                        if (intr.original_generic != converted_type) return false;
+                        refs.Add(intr);
+                        return true;
+                    });
+                    // type_table.AddInterface добавляет все зависимости
+                    // Контекст null потому что это всё уже было добавлено,
+                    // если ошибки и будут - то внутренние
+                    foreach (var intr in refs)
+                        type_table.AddInterface(t, intr, null);
+                }
+
             // Проверяем секции where предка/интерфейсов
             // В самом конце, когда converted_type
             // уже содержит всю информацию о предке и интерфейсах
