@@ -1,11 +1,16 @@
 name: Build & Run all tests (release)
 
 on:
+  pull_request:
   workflow_dispatch:
 
   release:
     types:
       - created
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -30,9 +35,3 @@ jobs:
         PABCNET_RUN_TESTS:  false
         PABCNET_INC_BUILD:  false
         PABCNET_VERBOSE:    false
-
-    #- name: Publish artifacts (5/5)...
-    #  uses: actions/upload-artifact@v2
-    #  with:
-    #    name: All_distros
-    #    path: Release
