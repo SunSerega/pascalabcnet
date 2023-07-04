@@ -53,15 +53,6 @@ namespace PascalABCCompiler.SystemLibrary
 		private static compiled_type_node _field_offset_attribute_type;
 		private static compiled_type_node _struct_layout_attribute_type;
 		
-        private static compiled_type_node _icloneable_interface;
-        private static compiled_type_node _ilist_interface;
-        private static compiled_type_node _icollection_interface;
-        private static compiled_type_node _ienumerable_interface;
-        private static compiled_type_node _ilist1_interface;
-        private static compiled_type_node _icollection1_interface;
-        private static compiled_type_node _ireadonlycollection_interface;
-        private static compiled_type_node _ienumerable1_interface;
-
         private static compiled_function_node _delegate_combine_method;
         private static compiled_function_node _delegate_remove_method;
 		private static compiled_function_node _assert_method;
@@ -1173,16 +1164,6 @@ namespace PascalABCCompiler.SystemLibrary
             _uint64_type = compiled_type_node.get_type_node(typeof(ulong), symtab);
             _uint64_type.SetName(StringConstants.ulong_type_name);
 
-            _icloneable_interface = compiled_type_node.get_type_node(typeof(ICloneable), symtab);
-            _ilist_interface = compiled_type_node.get_type_node(typeof(IList), symtab);
-            _icollection_interface = compiled_type_node.get_type_node(typeof(ICollection));
-            _ienumerable_interface = compiled_type_node.get_type_node(typeof(IEnumerable));
-            _ilist1_interface = compiled_type_node.get_type_node(typeof(IList<>));
-            var t = Type.GetType("System.Collections.Generic.IReadOnlyCollection`1");
-            if (t != null)
-                _ireadonlycollection_interface = compiled_type_node.get_type_node(t);
-            _icollection1_interface = compiled_type_node.get_type_node(typeof(ICollection<>));
-            _ienumerable1_interface = compiled_type_node.get_type_node(typeof(IEnumerable<>));
             _assert_method = compiled_function_node.get_compiled_method(typeof(System.Diagnostics.Debug).GetMethod("Assert",new Type[1]{typeof(bool)}));
             _decimal_type = compiled_type_node.get_type_node(typeof(decimal), symtab);
             //_decimal_type.SetName(StringConstants.decimal_type_name);
@@ -5205,70 +5186,6 @@ namespace PascalABCCompiler.SystemLibrary
             get
             {
                 return _pointer_to_int64;
-            }
-        }
-
-        public static compiled_type_node icloneable_interface
-        {
-            get
-            {
-                return _icloneable_interface;
-            }
-        }
-
-        public static compiled_type_node ilist_interface
-        {
-            get
-            {
-                return _ilist_interface;
-            }
-        }
-
-        public static compiled_type_node ienumerable_interface
-        {
-            get
-            {
-                return _ienumerable_interface;
-            }
-        }
-
-        public static compiled_type_node icollection_interface
-        {
-            get
-            {
-                return _icollection_interface;
-            }
-        }
-
-        public static compiled_type_node ilist1_interface
-        {
-            get
-            {
-                return _ilist1_interface;
-            }
-        }
-
-        public static compiled_type_node icollection1_interface
-        {
-            get
-            {
-                return _icollection1_interface;
-            }
-        }
-
-        public static compiled_type_node ienumerable1_interface
-        {
-            get
-            {
-                return _ienumerable1_interface;
-            }
-        }
-
-        public static compiled_type_node ireadonlycollection_interface
-        {
-            get
-            {
-                return _ireadonlycollection_interface;
             }
         }
 

@@ -111,20 +111,39 @@ namespace PascalABCCompiler.TreeConverter
 				types_unsized_arrays[element_type] = ret;
 			}
 			ret.Add(comtn);
-            //(ssyy) Добавляем интерфейсы.
-            comtn.ImplementingInterfaces.Add(SystemLibrary.SystemLibrary.icloneable_interface);
-            comtn.ImplementingInterfaces.Add(SystemLibrary.SystemLibrary.ilist_interface);
-            comtn.ImplementingInterfaces.Add(SystemLibrary.SystemLibrary.icollection_interface);
-            comtn.ImplementingInterfaces.Add(SystemLibrary.SystemLibrary.ienumerable_interface);
-            if (generic_parameter_eliminations.check_type_generic_useful(element_type, null) == null)
-            {
-                List<type_node> type_params = new List<type_node>(1);
-                type_params.Add(element_type);
-                comtn.ImplementingInterfaces.Add(SystemLibrary.SystemLibrary.ilist1_interface.get_instance(type_params));
-                comtn.ImplementingInterfaces.Add(SystemLibrary.SystemLibrary.icollection1_interface.get_instance(type_params));
-                comtn.ImplementingInterfaces.Add(SystemLibrary.SystemLibrary.ienumerable1_interface.get_instance(type_params));
-				if (SystemLibrary.SystemLibrary.ireadonlycollection_interface != null)
-					comtn.ImplementingInterfaces.Add(SystemLibrary.SystemLibrary.ireadonlycollection_interface.get_instance(type_params));
+
+			// Добавление интерфейсов
+			{
+				var dummy_arr_el_t = new { }.GetType();
+				var dummy_arr_t = rank==1 ? dummy_arr_el_t.MakeArrayType() : dummy_arr_el_t.MakeArrayType(rank);
+
+				var type_params =
+					// "array of pointer" не реализует IEnumerable<pointer>
+					// Потому что в шаблон нельзя подставлять указатели
+					// Так же отрезает такие реализации для древне-паскальных типов
+					// Как "array of 1..2" и "array of string[5]"
+					generic_parameter_eliminations.check_type_generic_useful(element_type, null) == null ?
+						new List<type_node> { element_type } : null;
+
+				foreach (var ctn_intr in dummy_arr_t.GetInterfaces())
+				{
+					if (!ctn_intr.IsGenericType)
+					{
+						comtn.ImplementingInterfaces.Add(compiled_type_node.get_type_node(ctn_intr));
+						continue;
+					}
+
+					var ctn_intr_gen_base = ctn_intr.GetGenericTypeDefinition();
+					if (ctn_intr != ctn_intr_gen_base.MakeGenericType(dummy_arr_el_t))
+						// Ни в одной из найденных мной версий .Net это не встречается
+						// Но если в будущем "array of T" будет реализовывать что-то типа "I1<T, byte>" или I1<I2<T>>"
+						// То тут нужен будет рекурсивный метод для подмены dummy_arr_el_t на element_type
+						throw new NotImplementedException(ctn_intr.ToString());
+
+					if (type_params == null) continue;
+
+					comtn.ImplementingInterfaces.Add(compiled_type_node.get_type_node(ctn_intr_gen_base).get_instance(type_params));
+				}
 			}
             //SystemLibrary.SystemLibrary.ic
             //(ssyy) Убрал 18.05.08
