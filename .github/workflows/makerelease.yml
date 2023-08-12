@@ -39,7 +39,7 @@ jobs:
                 PABCNET_VERBOSE:    false
 
             - name: Create Github Release
-              uses: actions/github-script@v6
+              uses: actions/github-script@main
               with:
                 script: |
                 
@@ -119,7 +119,7 @@ jobs:
         needs: [build]
         
         steps:
-            - uses: actions/github-script@v5
+            - uses: actions/github-script@main
               with:
                 github-token: ${{ secrets.PAT_TOKEN }}
                 script: |
