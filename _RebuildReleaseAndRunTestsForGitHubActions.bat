@@ -6,6 +6,7 @@ cd ReleaseGenerators
 ..\bin\pabcnetc RebuildStandartModules.pas /rebuild /noconsole
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
+
 cd PABCRtl
 ..\..\bin\pabcnetc PABCRtl.pas /rebuild /noconsole
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
@@ -20,6 +21,7 @@ ExecHide.exe gacutil.exe /i ..\bin\Lib\PABCRtl.dll
 
 ..\bin\pabcnetc RebuildStandartModules.pas /rebuild /noconsole
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+
 
 cd ..\bin
 REM MPGORunner.exe

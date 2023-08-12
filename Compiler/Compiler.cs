@@ -403,6 +403,14 @@ namespace PascalABCCompiler
         }
     }
 
+    public class UnsupportetTargetFramework: CompilerCompilationError
+    {
+        public UnsupportetTargetFramework(string FrameworkName, TreeRealization.location sl)
+            : base(string.Format(StringResources.Get("COMPILATIONERROR_UNSUPPORTED_TARGETFRAMEWORK_{0}"), FrameworkName))
+        {
+            this.sourceLocation = new SourceLocation(sl.doc.file_name, sl.begin_line_num, sl.begin_column_num, sl.end_line_num, sl.end_column_num);
+        }
+    }
 
     public enum UnitState { BeginCompilation, InterfaceCompiled, Compiled }
 
@@ -1053,7 +1061,7 @@ namespace PascalABCCompiler
             //SyntaxTreeChanger = new SyntaxTreeChanger.SyntaxTreeChange();
 
             OnChangeCompilerState += ChangeCompilerStateEvent;
-            Reload();            
+            Reload();
         }
         
         public Compiler(ICompiler comp, SourceFilesProviderDelegate SourceFilesProvider, ChangeCompilerStateEventDelegate ChangeCompilerState)
@@ -1997,6 +2005,13 @@ namespace PascalABCCompiler
                 }
                 if (this.compilerOptions.Only32Bit)
                     cdo.platformtarget = NETGenerator.CompilerOptions.PlatformTarget.x86;
+                if (compilerDirectives.TryGetValue(TreeConverter.compiler_string_consts.compiler_directive_targetframework, out cds))
+                {
+                    cdo.TargetFramework = cds[0].directive;
+                    if (!new string[] { "net40", "net403", "net45", "net451", "net452", "net46", "net461", "net462", "net47", "net471", "net472", "net48", "net481" }
+                        .Contains(cdo.TargetFramework))
+                        ErrorsList.Add(new UnsupportetTargetFramework(cdo.TargetFramework, cds[0].location));
+                }
                 if (compilerDirectives.TryGetValue(TreeConverter.compiler_string_consts.product_string, out cds))
                 {
                     cdo.Product = cds[0].directive;
@@ -2256,6 +2271,9 @@ namespace PascalABCCompiler
                             if (compilerOptions.UseDllForSystemUnits)
                                 cdo.RtlPABCSystemType = NetHelper.NetHelper.FindRtlType("PABCSystem.PABCSystem");
                             CodeGeneratorsController.Compile(pn, CompilerOptions.OutputFileName, CompilerOptions.SourceFileName, cdo, CompilerOptions.StandartDirectories, ResourceFilesArray);
+                            CodeGeneratorsController.EmitAssemblyRedirects(
+                                assemblyResolveScope,
+                                CompilerOptions.OutputFileName);
                             if (res_file != null)
                                 File.Delete(res_file);
                         }
@@ -2618,7 +2636,7 @@ namespace PascalABCCompiler
             var done = new HashSet<CompilationUnit>();
 
             var res_path = default(string);
-            bool register_unit(CompilationUnit u, string path)
+            Func<CompilationUnit, string, bool> register_unit = (CompilationUnit u, string path) =>
             {
                 if (!done.Add(u))
                     return true;
@@ -2629,7 +2647,7 @@ namespace PascalABCCompiler
                 }
                 curr.Add(u, path);
                 return true;
-            }
+            };
 
             if (!u1.ForEachDirectCompilationUnit(register_unit))
                 return res_path;
@@ -2697,7 +2715,7 @@ namespace PascalABCCompiler
             }
         }
         
-        private string GetReferenceFileName(string FileName, SyntaxTree.SourceContext sc, string curr_path)
+        private string GetReferenceFileName(string FileName, SyntaxTree.SourceContext sc, string curr_path, bool overwrite)
         {
             FileName = FileName.Trim();
             if (standart_assembly_dict.ContainsKey(FileName))
@@ -2719,7 +2737,14 @@ namespace PascalABCCompiler
             if (System.IO.File.Exists(FullFileName))
             {
                 var NewFileName = Path.Combine(compilerOptions.OutputDirectory, Path.GetFileName(FullFileName));
-                if (FullFileName != NewFileName) File.Copy(FullFileName, NewFileName, true);
+                if (FullFileName != NewFileName)
+                {
+                    if (overwrite)
+                        File.Copy(FullFileName, NewFileName, true);
+                    else if (!File.Exists(NewFileName))
+                        File.Copy(FullFileName, NewFileName, false);
+                }
+
                 return NewFileName;
             }
             else
@@ -2869,16 +2894,20 @@ namespace PascalABCCompiler
             }
         }
 
+        private Assembly PreloadReference(TreeRealization.compiler_directive reference)
+        {
+            var sc = GetSourceContext(reference);
+            var fileName = GetReferenceFileName(reference.directive, sc, Path.GetDirectoryName(reference.source_file), true);
+            return assemblyResolveScope.PreloadAssembly(fileName);
+        }
+
         private CompilationUnit CompileReference(PascalABCCompiler.TreeRealization.unit_node_list Units, TreeRealization.compiler_directive cd)
         {
-            TreeRealization.location loc = cd.location;
-            SyntaxTree.SourceContext sc = null;
-            if (loc != null)
-                sc = new SyntaxTree.SourceContext(loc.begin_line_num, loc.begin_column_num, loc.end_line_num, loc.end_column_num, 0, 0);
+            var sc = GetSourceContext(cd);
             string UnitName = null;
             try
             {
-                UnitName = GetReferenceFileName(cd.directive, sc, Path.GetDirectoryName(cd.source_file));
+                UnitName = GetReferenceFileName(cd.directive, sc, Path.GetDirectoryName(cd.source_file), false);
             }
             catch (AssemblyNotFound ex)
             {
@@ -2900,6 +2929,14 @@ namespace PascalABCCompiler
             else
                 //throw new DLLReadingError(UnitName);
                 throw new AssemblyReadingError(CurrentCompilationUnit.SyntaxTree.file_name, UnitName, sc);
+        }
+        
+        private SyntaxTree.SourceContext GetSourceContext(TreeRealization.compiler_directive cd)
+        {
+            var loc = cd.location;
+            if (loc == null) return null;
+            return new SyntaxTree.SourceContext(loc.begin_line_num, loc.begin_column_num, loc.end_line_num,
+                loc.end_column_num, 0, 0);
         }
 
         private bool HasIncludeNamespacesDirective(CompilationUnit Unit)
@@ -3088,6 +3125,8 @@ namespace PascalABCCompiler
                 }
                 
             }
+
+            var referenceDirectives = new List<TreeRealization.compiler_directive>();
             foreach (TreeRealization.compiler_directive cd in directives)
             {
                 if (cd.name.ToLower() == TreeConverter.compiler_string_consts.compiler_directive_reference)
@@ -3095,18 +3134,36 @@ namespace PascalABCCompiler
                     if (string.IsNullOrEmpty(cd.directive))
                         throw new TreeConverter.SimpleSemanticError(cd.location, "EXPECTED_ASSEMBLY_NAME");
                     else
-                        CompileReference(res, cd);
+                        referenceDirectives.Add(cd);
                 }
             }
             if (CompilerOptions.ProjectCompiled)
             {
             	foreach (ReferenceInfo ri in project.references)
             	{
-                    CompileReference(res, new TreeRealization.compiler_directive("reference", ri.full_assembly_name, null, project.MainFile));
+                    referenceDirectives.Add(new TreeRealization.compiler_directive("reference", ri.full_assembly_name, null, project.MainFile));
             	}
             }
+
+            if (assemblyResolveScope == null)
+                assemblyResolveScope = new NetHelper.AssemblyResolveScope(AppDomain.CurrentDomain);
+            
+            // It's important to preload all the referenced assemblies before starting the compilation. During the
+            // compilation, we need to access types from every referenced assembly. An attempt to access them could fail
+            // if a transitively dependent assembly is not loaded, yet.
+            //
+            // It's not always possible to solve by re-ordering the references, since there are cases of
+            // mutually-dependent assemblies (i.e. dependency loops) in the wild.
+            foreach (var reference in referenceDirectives)
+                PreloadReference(reference);
+
+            foreach (var reference in referenceDirectives)
+                CompileReference(res, reference);
+
             return res;
         }
+
+        NetHelper.AssemblyResolveScope assemblyResolveScope;
 
         private bool IsPossibleNamespace(SyntaxTree.unit_or_namespace name_space, bool add_to_standard_modules, string curr_path)
         {
@@ -4030,6 +4087,9 @@ namespace PascalABCCompiler
             project = null;
             StandarModules.Clear();
             CompiledVariables.Clear();
+            if (assemblyResolveScope != null)
+                assemblyResolveScope.Dispose();
+            assemblyResolveScope = null;
             if (!close_pcu)
             {
                 SyntaxTreeToSemanticTreeConverter = new TreeConverter.SyntaxTreeToSemanticTreeConverter();

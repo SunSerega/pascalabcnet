@@ -1,20 +1,22 @@
 // Copyright (c) Ivan Bondarev, Stanislav Mikhalkovich (for details please see \doc\copyright.txt)
 // This code is distributed under the GNU LGPL (for details please see \doc\license.txt)
+
 using System;
-using System.Linq;
-using PascalABCCompiler.SemanticTree;
-using System.Threading;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Diagnostics.SymbolStore;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using System.Runtime.Remoting;
-using System.Security;
 using System.Runtime.Versioning;
+using System.Security;
 using System.Text;
+using System.Threading;
+using NETGenerator;
+using PascalABCCompiler.NetHelper;
+using PascalABCCompiler.SemanticTree;
 
 namespace PascalABCCompiler.NETGenerator
 {
@@ -54,6 +56,14 @@ namespace PascalABCCompiler.NETGenerator
         {
             get { return _platformtarget; }
             set { _platformtarget = value; }
+        }
+
+        private string _TargetFramework = "";
+
+        public string TargetFramework
+        {
+            get { return _TargetFramework; }
+            set { _TargetFramework = value; }
         }
 
         public string Product
@@ -1157,6 +1167,12 @@ namespace PascalABCCompiler.NETGenerator
             ab.SetCustomAttribute(new CustomAttributeBuilder(typeof(System.Reflection.AssemblyTitleAttribute).GetConstructor(new Type[] { typeof(string) }), new object[] { options.Title }));
 
             ab.SetCustomAttribute(new CustomAttributeBuilder(typeof(System.Reflection.AssemblyDescriptionAttribute).GetConstructor(new Type[] { typeof(string) }), new object[] { options.Description }));
+            
+            if (options.TargetFramework != "")
+            {
+                string frameworkVersion = string.Join(".", options.TargetFramework.Substring(3).AsEnumerable());
+                ab.SetCustomAttribute(new CustomAttributeBuilder(typeof(TargetFrameworkAttribute).GetConstructor(new Type[] { typeof(string) }), new object[] { $".NETFramework,Version=v{frameworkVersion}" }));
+            }
 
             if (RunOnly)
             {
@@ -1218,6 +1234,13 @@ namespace PascalABCCompiler.NETGenerator
             foreach (FileStream fs in ResStreams)
                 fs.Close();
 
+        }
+
+        public void EmitAssemblyRedirects(AssemblyResolveScope resolveScope, string targetAssemblyPath)
+        {
+            if (IsDotnet5() || IsDotnetNative()) return;
+            var appConfigPath = targetAssemblyPath + ".config";
+            AppConfigUtil.UpdateAppConfig(resolveScope.CalculateBindingRedirects(), appConfigPath);
         }
 
         private void AddSpecialInitDebugCode()
@@ -8044,7 +8067,7 @@ namespace PascalABCCompiler.NETGenerator
                     (ctn2 != null && (ctn2.compiled_type == TypeFactory.ObjectType || ctn2.compiled_type == TypeFactory.EnumType) || tn2.IsInterface) && !(real_parameters[i] is SemanticTree.INullConstantNode) 
                 	&& (ctn3.is_value_type || ctn3.is_generic_parameter);
                 if (!box_awaited && (ctn2 != null && ctn2.compiled_type == TypeFactory.ObjectType || tn2.IsInterface) && !(real_parameters[i] is SemanticTree.INullConstantNode) 
-                	&& ctn4 != null && ctn4.is_value_type)
+                	&& ctn4 != null && (ctn4.is_value_type || ctn4.is_generic_parameter))
                 {
                 	box_awaited = true;
                 	use_stn4 = true;
@@ -9457,8 +9480,15 @@ namespace PascalABCCompiler.NETGenerator
                     }
                 }
                 real_parameters[0].visit(this);
+                if (value.basic_function.basic_function_type == basic_function_type.uimul)
+                    il.Emit(OpCodes.Conv_I8);
                 if (real_parameters.Length > 1)
+                {
                     real_parameters[1].visit(this);
+                    if (value.basic_function.basic_function_type == basic_function_type.uimul)
+                        il.Emit(OpCodes.Conv_I8);
+                }
+                    
                 EmitOperator(value);//кладем соотв. команду
                 if (tmp_dot)
                 {
@@ -11025,7 +11055,10 @@ namespace PascalABCCompiler.NETGenerator
             is_dot_expr = tmp_is_dot_expr;
             is_addr = tmp_is_addr;
             il.Emit(OpCodes.Brtrue, NullLabel);
-            il.Emit(OpCodes.Ldloc, tmp_lb);
+            if (value.condition.type.is_nullable_type && tmp_is_dot_expr)
+                il.Emit(OpCodes.Ldloca, tmp_lb);
+            else
+                il.Emit(OpCodes.Ldloc, tmp_lb);
             TypeInfo ti = helper.GetTypeReference(value.condition.type);
             if (ti != null)
                 EmitBox(value.condition, ti.tp);

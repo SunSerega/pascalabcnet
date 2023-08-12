@@ -573,8 +573,10 @@ namespace PascalABCCompiler.TreeRealization
                     var ImplementingInterfaces = tnode.ImplementingInterfaces.ToList();
                     // Из-за этой строки возникла ошибка https://github.com/pascalabcnet/pascalabcnet/issues/2872
                     // Но без этой строчки не работает преобразование sequence of Student к sequence of Person и sequence of object
-                    //if (tnode.IsInterface)
-                    //    ImplementingInterfaces.Add(tnode);
+                    // SSM 19/07/23 - снова раскомментировал - теперь не работало
+                    // CheckOutputSeq(a); в Tasks где var a: array of char
+                    if (tnode.IsInterface)
+                        ImplementingInterfaces.Add(tnode);
                     foreach (var interf in ImplementingInterfaces)
                     {
                         var ctn = interf as compiled_type_node;
@@ -599,11 +601,11 @@ namespace PascalABCCompiler.TreeRealization
                         // Тут можно проверить на ковариантность
                         // еще где то надо проверять, что IEnumerable<Derived> -> IEnumerable<Base>, но здесь base_class предполагает, 
                         // что это - класс, и рассматривает все его интерфейсы, упуская ситуацию, когда base_class - это и есть интерфейс
-                        else if ((cgitn != null || ctn != null) && (bcgitn != null || bcctn != null)) // SSM 19/04
                         //else if (cgitn != null && (bcgitn != null || bcctn != null))
                         //else if ((cgitn != null || ctn != null) && bcgitn != null)
                         //else if (cgitn != null && bcgitn != null)
                         //else if (cgitn != null && bcgitn != null || ctn != null && bcctn != null) // SSM 18/04 немного большие ограничения
+                        else if ((cgitn != null || ctn != null) && (bcgitn != null || bcctn != null)) // SSM 19/04
                         {
                             compiled_type_node interf_original_generic = cgitn != null ? cgitn.original_generic as compiled_type_node : ctn.original_generic as compiled_type_node;
                             compiled_type_node base_original_generic = bcgitn != null ? bcgitn.original_generic as compiled_type_node : bcctn.original_generic as compiled_type_node;
@@ -635,7 +637,7 @@ namespace PascalABCCompiler.TreeRealization
                                         // ctcgi.compiled_type - это System.Type
                                         if ((interf_compiled_type.GetGenericArguments()[i].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Covariant) != 0)
                                         {
-                                            if (is_derived(base_instance_params[i], interf_instance_params[i], false))
+                                            if (is_derived(base_instance_params[i], interf_instance_params[i], false)) // is_derived(object , T, false) = true, что неверно - T - не наследник object!!!
                                             {
                                                 // OK
                                             }
