@@ -90,17 +90,18 @@ jobs:
 
                     for (let file of await fs.readdir('Release')) {
                         console.log('uploading', file);
+                        if (file.startsWith('.')) continue;
 
-                    try {
-                        await github.rest.repos.uploadReleaseAsset({
-                            owner, repo,
-                            release_id: release.data.id,
-                            name: file,
-                            data: await fs.readFile(`./Release/${file}`)
-                        });
-                    } catch (error) {
-                        console.error(`Error uploading: ${error}`);
-                    }
+                        try {
+                            await github.rest.repos.uploadReleaseAsset({
+                                owner, repo,
+                                release_id: release.data.id,
+                                name: file,
+                                data: await fs.readFile(`./Release/${file}`)
+                            });
+                        } catch (error) {
+                            console.error(`Error uploading: ${error}`);
+                        }
 
                     }
 
