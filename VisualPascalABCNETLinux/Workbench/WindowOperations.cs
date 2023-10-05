@@ -343,9 +343,11 @@ namespace VisualPascalABC
             HideContent(DisassemblyWindow);
             AddDebugVariablesListWindow();
             HideContent(DebugVariablesListWindow);
+            AddDebugWatchListWindow();
+            HideContent(DebugWatchListWindow);
             /*AddImmediateWindow();
             
-            //AddDebugWatchListWindow();
+           
             if (!Tools.IsUnix())
             {
                 AddProjectExplorerWindow();
@@ -698,7 +700,9 @@ namespace VisualPascalABC
             }
             catch (System.Exception ex)
             {
+#if (DEBUG)
                 Console.WriteLine(ex.Message + " " + ex.StackTrace);
+#endif
             }
         }
 
