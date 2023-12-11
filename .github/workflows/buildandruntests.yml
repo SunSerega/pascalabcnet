@@ -49,7 +49,7 @@ jobs:
                 temp.msi /quiet
                 del /S temp.msi
                 
-                dotnet-core-uninstall remove --all --sdk --force
+                "C:\Program Files (x86)\dotnet-core-uninstall\dotnet-core-uninstall.exe" remove --all --sdk --force
                 
                 where dotnet
           
