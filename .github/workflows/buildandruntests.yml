@@ -15,6 +15,11 @@ defaults:
 
 jobs:
     
+    test-msbuild:
+        runs-on: windows-latest
+        steps:
+         - run: msbuild.exe -h
+    
     build-latest:
         name: Prepare and build on Latest Windows Server VM
         runs-on: windows-latest
