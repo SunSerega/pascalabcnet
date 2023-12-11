@@ -43,7 +43,7 @@ jobs:
             uses: microsoft/setup-msbuild@v1
           
           - name: Uninstall existing versions of .Net
-            run: dotnet-core-uninstall remove --all --sdk --force
+            run: |
           
           - name: Setup .NET Framework 4.0
             run: choco install dotnet4.0 -y
