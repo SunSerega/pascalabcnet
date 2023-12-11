@@ -57,8 +57,8 @@ jobs:
           - name: temp
             run: |
             
-                rem dotnet --list-runtimes
-                rem dotnet --list-sdks
+                dotnet --list-runtimes
+                dotnet --list-sdks
           
           - name: Install dependencies into Virtual Environment...
             run: _RegisterHelixNUnit.bat
