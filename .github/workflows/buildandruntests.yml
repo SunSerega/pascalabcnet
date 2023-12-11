@@ -19,13 +19,15 @@ jobs:
         name: Prepare and build on Latest Windows Server VM
         runs-on: windows-latest
         steps:
-          - uses: actions/checkout@v2
+          - uses: actions/checkout@v4
           
           - name: Setup MSBuild
             uses: microsoft/setup-msbuild@v1
           
-          - name: Install .NET SDK
-            run: choco install windows-sdk-10.0 -y
+          - name: Install .NET Framework Developer Pack
+            uses: microsoft/windows-sdk@1.0.0
+            with:
+                version: '10.0.18362.0'
           
           - name: Install dependencies into Virtual Environment...
             run: _RegisterHelixNUnit.bat
@@ -40,7 +42,7 @@ jobs:
         name: Prepare and build on Legacy Windows Server 2019 VM to simulate WinXP
         runs-on: windows-2019
         steps:
-          - uses: actions/checkout@v2
+          - uses: actions/checkout@v4
           
           - name: Setup MSBuild
             uses: microsoft/setup-msbuild@v1
