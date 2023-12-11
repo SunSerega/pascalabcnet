@@ -28,7 +28,7 @@ jobs:
             run: _RebuildReleaseAndRunTestsForGitHubActions.bat
             timeout-minutes: 40
             env:
-                REBUILD_PAS_FILE = RebuildStandartModules.pas
+                REBUILD_PAS_FILE: RebuildStandartModules.pas
     
     build-WinXP:
         name: Prepare and build on Legacy Windows Server 2019 VM to simulate WinXP
@@ -48,5 +48,5 @@ jobs:
             run: _RebuildReleaseAndRunTestsForGitHubActions.bat
             timeout-minutes: 40
             env:
-                REBUILD_PAS_FILE = RebuildStandartWinXPModules.pas
+                REBUILD_PAS_FILE: RebuildStandartWinXPModules.pas
     
