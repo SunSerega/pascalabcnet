@@ -44,6 +44,12 @@ jobs:
           
           - name: Uninstall existing versions of .Net
             run: |
+            
+                curl -o "temp.msi" "https://github.com/dotnet/cli-lab/releases/download/1.6.0/dotnet-core-uninstall-1.6.0.msi"
+                temp.msi /quiet
+                del /S temp.msi
+                
+                where dotnet
           
           - name: Setup .NET Framework 4.0
             run: choco install dotnet4.0 -y
@@ -51,8 +57,8 @@ jobs:
           - name: temp
             run: |
             
-                dotnet --list-runtimes
-                dotnet --list-sdks
+                rem dotnet --list-runtimes
+                rem dotnet --list-sdks
           
           - name: Install dependencies into Virtual Environment...
             run: _RegisterHelixNUnit.bat
