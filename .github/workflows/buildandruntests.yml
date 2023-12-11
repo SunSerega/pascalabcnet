@@ -48,6 +48,12 @@ jobs:
           - name: Setup .NET Framework 4.0
             run: choco install dotnet4.0 -y
           
+          - name: temp
+            run: |
+            
+                dotnet --list-runtimes
+                dotnet --list-sdks
+          
           - name: Install dependencies into Virtual Environment...
             run: _RegisterHelixNUnit.bat
           
