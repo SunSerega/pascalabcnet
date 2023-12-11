@@ -7,7 +7,6 @@ where msbuild.exe
 if %ERRORLEVEL% EQU 0 (
 	"msbuild.exe" %1 %2 %3 %4
 ) else (
-	::SET ERRORLEVEL=0
 	
 	
 	
