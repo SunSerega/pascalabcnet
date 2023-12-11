@@ -24,12 +24,6 @@ jobs:
           - name: Setup MSBuild
             uses: microsoft/setup-msbuild@v1
           
-          - name: Setup .NET Framework 4.0
-            run: choco install dotnet4.0 -y
-          
-          - name: Setup latest .NET Framework
-            run: choco install dotnetfx --pre -y
-          
           - name: Install dependencies into Virtual Environment...
             run: _RegisterHelixNUnit.bat
           
