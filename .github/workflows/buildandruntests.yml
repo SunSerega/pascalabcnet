@@ -16,7 +16,7 @@ defaults:
 jobs:
     
     build-latest:
-        name: Prepare and build on Latest Windows Server VM
+        name: .Net Framework - Latest
         runs-on: windows-2019
         steps:
           - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
                 REBUILD_PAS_FILE: RebuildStandartModules.pas
     
     build-WinXP:
-        name: Prepare and build on Legacy Windows Server 2019 VM to simulate WinXP
+        name: .Net Framework 4.0
         runs-on: windows-2019
         steps:
           - uses: actions/checkout@v4

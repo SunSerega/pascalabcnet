@@ -2,6 +2,8 @@
 
 
 /RebuildStandartModules.exe
+/RebuildStandartModulesMono.exe
+/RebuildStandartWinXPModules.exe
 /Samples/BF/*
 /Samples/PAS/*
 /Samples/PL0/*

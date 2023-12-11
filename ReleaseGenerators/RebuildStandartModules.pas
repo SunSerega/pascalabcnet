@@ -23,6 +23,7 @@ uses
    ;
    
 begin
+  var c: System.Collections.Generic.IReadOnlyCollection<byte>;
   writeln(cos(pi));
   readln;
 end.
