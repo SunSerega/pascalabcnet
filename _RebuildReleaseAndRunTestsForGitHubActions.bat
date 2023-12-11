@@ -1,11 +1,11 @@
-call Studio.bat /t:rebuild "/property:Configuration=Release" "/p:Platform=Any CPU" PascalABCNET.sln
+﻿call Studio.bat /t:rebuild "/property:Configuration=Release" "/p:Platform=Any CPU" PascalABCNET.sln
 
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 
 
 cd ReleaseGenerators
-..\bin\pabcnetc REBUILD_PAS_FILE /rebuild /noconsole
+..\bin\pabcnetc %REBUILD_PAS_FILE% /rebuild /noconsole
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 
@@ -22,7 +22,7 @@ cd ..
 ExecHide.exe gacutil.exe /u PABCRtl
 ExecHide.exe gacutil.exe /i ..\bin\Lib\PABCRtl.dll
 
-..\bin\pabcnetc REBUILD_PAS_FILE /rebuild /noconsole
+..\bin\pabcnetc %REBUILD_PAS_FILE% /rebuild /noconsole
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 
@@ -52,5 +52,6 @@ GOTO EXIT
 
 :ERROR
 PAUSE
+exit /b %ERRORLEVEL%
 
 :EXIT
