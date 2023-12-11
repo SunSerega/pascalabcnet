@@ -1,44 +1,52 @@
 ﻿name: Build & Run all tests (release)
 
 on:
-  push:
-  pull_request:
-  workflow_dispatch:
-
-  release:
-    types:
-      - created
-
+    push:
+    pull_request:
+    workflow_dispatch:
+    
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 defaults:
-  run:
-    shell: cmd
+    run:
+        shell: cmd
 
 jobs:
-  build:
-
-    name: Prepare and build on Windows Server 2016 VM
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install dependencies into Virtual Environment...
-      run: _RegisterHelixNUnit.bat
-
-    - name: Build project in Release-mode, compile Pas-units, run tests
-      run: _RebuildReleaseAndRunTestsForGitHubActions.bat
-      timeout-minutes: 40
-      env:
-        PABCNET_BUILD_MODE: Release
-        PABCNET_RUN_TESTS:  false
-        PABCNET_INC_BUILD:  false
-        PABCNET_VERBOSE:    false
-
-    #- name: Publish artifacts (5/5)...
-    #  uses: actions/upload-artifact@v2
-    #  with:
-    #    name: All_distros
-    #    path: Release
+    
+    build-latest:
+        name: Prepare and build on Latest Windows Server VM
+        runs-on: windows-latest
+        steps:
+          - uses: actions/checkout@v2
+          
+          - name: Install dependencies into Virtual Environment...
+            run: _RegisterHelixNUnit.bat
+          
+          - name: Build project in Release-mode, compile Pas-units, run tests
+            run: _RebuildReleaseAndRunTestsForGitHubActions.bat
+            timeout-minutes: 40
+            env:
+                REBUILD_PAS_FILE = RebuildStandartModules.pas
+    
+    build-WinXP:
+        name: Prepare and build on Legacy Windows Server 2019 VM to simulate WinXP
+        runs-on: windows-2019
+        steps:
+          - uses: actions/checkout@v2
+          
+          - name: Setup .NET Framework 4.0
+            uses: actions/setup-dotnet@v1
+            with:
+                dotnet-version: '4.0'
+          
+          - name: Install dependencies into Virtual Environment...
+            run: _RegisterHelixNUnit.bat
+          
+          - name: Build project in Release-mode, compile Pas-units, run tests
+            run: _RebuildReleaseAndRunTestsForGitHubActions.bat
+            timeout-minutes: 40
+            env:
+                REBUILD_PAS_FILE = RebuildStandartWinXPModules.pas
+    
