@@ -33,7 +33,7 @@ jobs:
             env:
                 REBUILD_PAS_FILE: RebuildStandartModules.pas
     
-    build-Net4.0:
+    build-Net40:
         name: .Net Framework 4.0
         runs-on: windows-2019
         steps:
