@@ -15,13 +15,6 @@ defaults:
 
 jobs:
     
-    test-msbuild:
-        runs-on: windows-latest
-        steps:
-          - name: Setup MSBuild
-            uses: microsoft/setup-msbuild@v1
-          - run: msbuild.exe -h
-    
     build-latest:
         name: Prepare and build on Latest Windows Server VM
         runs-on: windows-latest
@@ -30,6 +23,9 @@ jobs:
           
           - name: Setup MSBuild
             uses: microsoft/setup-msbuild@v1
+          
+          - name: Install .NET SDK
+            run: choco install windows-sdk-10.0 -y
           
           - name: Install dependencies into Virtual Environment...
             run: _RegisterHelixNUnit.bat
