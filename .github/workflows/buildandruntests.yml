@@ -46,7 +46,7 @@ jobs:
             run: |
             
                 curl -o "temp.msi" "https://github.com/dotnet/cli-lab/releases/download/1.6.0/dotnet-core-uninstall-1.6.0.msi"
-                msiexec /i temp.msi /quiet /L*v temp.log
+                temp.msi /quiet /L*v temp.log
                 type temp.log
                 del /S temp.msi
                 
