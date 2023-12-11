@@ -49,7 +49,15 @@ jobs:
                 temp.msi /quiet
                 del /S temp.msi
                 
+                dotnet-core-uninstall remove --all --sdk --force
+                
                 where dotnet
+          
+          - name: temp
+            run: |
+            
+                dotnet --list-runtimes
+                dotnet --list-sdks
           
           - name: Setup .NET Framework 4.0
             run: choco install dotnet4.0 -y
