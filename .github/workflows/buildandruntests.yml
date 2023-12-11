@@ -28,6 +28,9 @@ jobs:
         steps:
           - uses: actions/checkout@v2
           
+          - name: Setup MSBuild
+            uses: microsoft/setup-msbuild@v1
+          
           - name: Install dependencies into Virtual Environment...
             run: _RegisterHelixNUnit.bat
           
@@ -42,6 +45,9 @@ jobs:
         runs-on: windows-2019
         steps:
           - uses: actions/checkout@v2
+          
+          - name: Setup MSBuild
+            uses: microsoft/setup-msbuild@v1
           
           - name: Setup .NET Framework 4.0
             run: choco install dotnet4.0 -y
