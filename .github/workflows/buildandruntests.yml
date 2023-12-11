@@ -33,7 +33,7 @@ jobs:
             env:
                 REBUILD_PAS_FILE: RebuildStandartModules.pas
     
-    build-WinXP:
+    build-Net4.0:
         name: .Net Framework 4.0
         runs-on: windows-2019
         steps:
@@ -41,6 +41,9 @@ jobs:
           
           - name: Setup MSBuild
             uses: microsoft/setup-msbuild@v1
+          
+          - name: Uninstall existing versions of .Net
+            run: dotnet-core-uninstall remove --all --sdk --force
           
           - name: Setup .NET Framework 4.0
             run: choco install dotnet4.0 -y
