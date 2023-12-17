@@ -771,7 +771,7 @@ type
     
     property Low: real read l;
     property High: real read h;
-    property Size: real read h-l;
+    property Size: real read System.Math.Max(0, h-l);
     
     static function operator in(x: real; r: RealRange): boolean := (x >= r.l) and (x <= r.h);
     
