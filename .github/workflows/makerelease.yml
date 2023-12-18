@@ -1,11 +1,7 @@
-name: Build & Run all tests (release) & Make an unstable release
+﻿name: Build & Run all tests (release) & Make an unstable release
 
 on:
   push:
-
-  release:
-    types:
-      - created
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -25,10 +21,10 @@ jobs:
         runs-on: windows-2019
         steps:
             - uses: actions/checkout@v3
-
+            
             - name: Install dependencies into Virtual Environment...
               run: _RegisterHelixNUnit.bat
-
+            
             - name: Build project in Release-mode, compile Pas-units, run tests
               run: _GenerateAllSetupsForGitHubActions.bat
               timeout-minutes: 40
@@ -37,19 +33,21 @@ jobs:
                 PABCNET_RUN_TESTS:  false
                 PABCNET_INC_BUILD:  false
                 PABCNET_VERBOSE:    false
-
+            
             - name: Create Github Release
               uses: actions/github-script@main
               with:
                 script: |
                 
+                    const tag = "custom-build-tag"; // git tag name (preferably different from branch name)
+                    const release_name = "Custom unstable build"; // Github release display name
+                    const mark_pre_release = true;
+                    
                     console.log('environment', process.versions);
-
+                    
                     const { repo: { owner, repo }, sha } = context;
                     console.log({ owner, repo, sha });
-
-                    const tag = "unstable";
-
+                    
                     // Check if the release already exists
                     const existingReleases = await github.rest.repos.listReleases({ owner, repo });
                     for (const existingRelease of existingReleases.data) {
@@ -63,35 +61,35 @@ jobs:
                             break;
                         }
                     }
-
+                    
                     try {
                         await github.rest.git.deleteRef({
                             owner: owner,
                             repo: repo,
-                            ref: 'tags/unstable'
+                            ref: `tags/${tag}`
                         });
                         console.log('Tag deleted successfully');
                     } catch (error) {
                         console.error(`Error deleting tag: ${error}`);
                     }
-
+                    
                     const fs = require('fs').promises;
-
+                    
                     const release = await github.rest.repos.createRelease({
                         owner, repo,
                         tag_name: tag,
-                        name: "Custom unstable build",
+                        name: release_name,
                         draft: true,
-                        prerelease: true,
+                        prerelease: mark_pre_release,
                         target_commitish: sha
                     });
-
+                    
                     console.log('created release', { release });
-
+                    
                     for (let file of await fs.readdir('Release')) {
                         console.log('uploading', file);
                         if (file.startsWith('.')) continue;
-
+                        
                         try {
                             await github.rest.repos.uploadReleaseAsset({
                                 owner, repo,
@@ -102,9 +100,9 @@ jobs:
                         } catch (error) {
                             console.error(`Error uploading: ${error}`);
                         }
-
+                        
                     }
-
+                    
                     if (release.data.draft) {
                         console.log('finalizing draft release');
                         await github.rest.repos.updateRelease({
@@ -114,27 +112,3 @@ jobs:
                             draft: false,
                         });
                     }
-                    
-    Trigger-dependant-rep-actions:
-        runs-on: ubuntu-latest
-        needs: [build]
-        
-        steps:
-            - uses: actions/github-script@main
-              with:
-                github-token: ${{ secrets.PAT_TOKEN }}
-                script: |
-                
-                    if (false) await github.rest.actions.createWorkflowDispatch({
-                        owner: 'SunSerega',
-                        repo: 'POCGL',
-                        workflow_id: 'on commit.yaml',
-                        ref: 'stable',
-                    });
-                    await github.rest.actions.createWorkflowDispatch({
-                        owner: 'SunSerega',
-                        repo: 'POCGL',
-                        workflow_id: 'on commit.yaml',
-                        ref: 'unstable',
-                    });
-                    
