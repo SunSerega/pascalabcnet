@@ -1,18 +1,20 @@
-﻿name: Build & Run all tests (release) & Make an unstable release
+﻿name: Build & Run all tests (release) & Make a nightly release
 
 on:
-  push:
+    push:
+    schedule:
+        - cron: '0 0 * * *'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 permissions:
-  contents: write
+    contents: write
 
 defaults:
-  run:
-    shell: cmd
+    run:
+        shell: cmd
 
 jobs:
     build:
@@ -21,6 +23,17 @@ jobs:
         runs-on: windows-2019
         steps:
             - uses: actions/checkout@v3
+              with:
+                fetch-depth: 0
+            
+            - name: Pull changes from original repo
+              run: |
+            
+                git config --global user.name "sun pack bot"
+                git config --global user.email "sunserega2@gmail.com"
+                
+                git pull https://github.com/pascalabcnet/pascalabcnet.git master
+                git push
             
             - name: Install dependencies into Virtual Environment...
               run: _RegisterHelixNUnit.bat
@@ -42,9 +55,8 @@ jobs:
               with:
                 script: |
                 
-                    throw 'please configure custom auto-release and remove this line';
-                    const tag = "_____"; // git tag name (preferably different from branch name)
-                    const release_name = "Custom _____ build"; // Github release display name
+                    const tag = "nightly-release-tag"; // git tag name (preferably different from branch name)
+                    const release_name = "Nightly build"; // Github release display name
                     const mark_pre_release = true;
                     
                     console.log('environment', process.versions);
