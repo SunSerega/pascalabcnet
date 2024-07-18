@@ -519,6 +519,7 @@ type
     function ToString: string; override;
     class function operator implicit<T>(s: TypedSet): HashSet<T>;
     class function operator implicit<T>(s: HashSet<T>): TypedSet;
+    class function operator implicit<T>(s: array of T): TypedSet;
     class function InitBy<T>(s: sequence of T): TypedSet;
     //class function operator implicit<T>(a: array of T): TypedSet;
     function Count: integer := ht.Count;
@@ -2483,10 +2484,16 @@ function SSetStr(params a: array of string): SortedSet<string>;
 function Dict<TKey, TVal>(params pairs: array of KeyValuePair<TKey, TVal>): Dictionary<TKey, TVal>;
 /// Возвращает словарь пар элементов (ключ, значение)
 function Dict<TKey, TVal>(params pairs: array of (TKey, TVal)): Dictionary<TKey, TVal>;
-/// Возвращает словарь пар элементов (ключ, значение), построенный на значениях последовательности
+/// Возвращает словарь пар элементов (ключ, значение), построенный по последовательности пар
+function Dict<TKey, TVal>(pairs: sequence of KeyValuePair<TKey, TVal>): Dictionary<TKey, TVal>;
+/// Возвращает словарь пар элементов (ключ, значение), построенный по последовательности пар
 function Dict<TKey, TVal>(pairs: sequence of (TKey, TVal)): Dictionary<TKey, TVal>;
+/// Возвращает словарь пар элементов (ключ, значение), построенный по последовательностям ключей и значений
+function Dict<TKey, TVal>(keys: sequence of TKey; values: sequence of TVal): Dictionary<TKey, TVal>; 
 /// Возвращает пару элементов (ключ, значение)
 function KV<TKey, TVal>(key: TKey; value: TVal): KeyValuePair<TKey, TVal>;
+/// Возвращает пару элементов (ключ, значение)
+function Pair<TKey, TVal>(key: TKey; value: TVal): KeyValuePair<TKey, TVal>;
 /// Возвращает словарь пар элементов (строка, строка)
 function DictStr(params pairs: array of (string, string)): Dictionary<string, string>;
 /// Возвращает словарь пар элементов (строка, целое)
@@ -3497,17 +3504,6 @@ begin
     Result := string.Format(System.Globalization.NumberFormatInfo.InvariantInfo, '{0}', new object[](obj))
 end;
 
-///--
-class function TypedSet.operator implicit<T>(s: TypedSet): HashSet<T>;
-begin
-  var hs := new HashSet<T>();
-  foreach var key in s.ht.Keys do
-  begin
-    hs.Add(T(key));  
-  end;
-  Result := hs; 
-end;
-
 class function TypedSet.InitBy<T>(s: sequence of T): TypedSet;
 begin
   var ts := new TypedSet();
@@ -3519,10 +3515,32 @@ begin
 end;
 
 ///--
+class function TypedSet.operator implicit<T>(s: TypedSet): HashSet<T>;
+begin
+  var hs := new HashSet<T>();
+  foreach var key in s.ht.Keys do
+  begin
+    hs.Add(T(key));  
+  end;
+  Result := hs; 
+end;
+
+///--
 class function TypedSet.operator implicit<T>(s: HashSet<T>): TypedSet;
 begin
   var ts := new TypedSet();
   foreach key: T in s.ToArray() do
+  begin
+    ts.ht[key] := key;  
+  end;
+  Result := ts; 
+end;
+
+///--
+class function TypedSet.operator implicit<T>(s: array of T): TypedSet;
+begin
+  var ts := new TypedSet();
+  foreach key: T in s do
   begin
     ts.ht[key] := key;  
   end;
@@ -5215,7 +5233,34 @@ begin
     raise new System.ArgumentException('step = 0');
   if (step > 0) and (b < a) or (step < 0) and (b > a) then
     exit;
-  var n := Round(Abs(b - a) / step);
+  if a = b then 
+  begin
+    yield a;
+    exit;
+  end;
+  // SSM 30/06/24
+  // Шкалируем [a,b] к отрезку [0,1]
+  var stepScaled := decimal(step) / (decimal(a) - decimal(b));
+  if stepScaled < 0 then
+    stepScaled := -stepScaled;
+  // Находим n - количество частей (левая точка последней части может не входить)
+  var n := decimal.ToInt32(decimal.Round(1/stepScaled));
+  //Println('-->',stepScaled,n);
+  // Возможны 3 ситуации:
+  // 1) - stepScaled * n < 1 - 1e-14 - тогда надо делать n+1 шаг
+  // 2) - stepScaled * n и диапазоне [1 - 1e-14, 1 + 1e-14] - тогда надо делать n+1 шаг и последнюю точку примагничивать к b
+  // 3) - stepScaled * n > 1 + 1e-14 - тогда надо делать n шагов
+  // Сделаем n шагов, а потом решим, делать ли последний шаг
+  for var i:=0 to n-1 do
+    yield a + i * step; // нельзя просто прибавлять step - при больших a,b они просто не будут меняться
+  var delta := decimal(1e-14); // относительная погрешность относительно 1 
+  if (stepScaled * n >= 1 - delta) and (stepScaled * n <= 1 + delta) then
+    yield b // вернуть ровно b - то, ради чего всё затевалось
+  else if stepScaled * n < 1 - delta then
+    yield a + n * step; // что ж, step задан неверно и мы "не долетаем" до b
+  // Если "перелетаем" b, то ничего и не возвращаем на конце
+  // Старый алгоритм
+  {var n := Round(Abs(b - a) / step);
   var delta := n / Abs(b - a) * 1e-14;
   var bplus := b + delta;
   var bminus := b - delta;
@@ -5238,7 +5283,7 @@ begin
     end;
     if a > bminus then
       yield b;
-  end
+  end}
 end;
 
 function ArrRandom(n: integer; a: integer; b: integer): array of integer;
@@ -5683,13 +5728,21 @@ begin
     Result.Add(pairs[i][0], pairs[i][1]);
 end;
 
-function Dict<TKey, TVal>(pairs: sequence of (TKey, TVal)): Dictionary<TKey, TVal> 
-  := Dict(pairs.ToArray); // внутренняя ошибка компилятора
+function Dict<TKey, TVal>(pairs: sequence of KeyValuePair<TKey, TVal>): Dictionary<TKey, TVal> 
+  := Dict(pairs.ToArray); 
 
-function KV<TKey, TVal>(key: TKey; value: TVal): KeyValuePair<TKey, TVal>;
-begin
-  Result := new KeyValuePair<TKey, TVal>(key, value);
-end;
+function Dict<TKey, TVal>(pairs: sequence of (TKey, TVal)): Dictionary<TKey, TVal> 
+  := Dict(pairs.ToArray); 
+  
+function Dict<TKey, TVal>(keys: sequence of TKey; values: sequence of TVal): Dictionary<TKey, TVal> 
+  := Dict(keys.Zip(values, (k,v) -> KV(k,v)));
+  
+  
+function KV<TKey, TVal>(key: TKey; value: TVal): KeyValuePair<TKey, TVal>
+  := new KeyValuePair<TKey, TVal>(key, value);
+
+function Pair<TKey, TVal>(key: TKey; value: TVal): KeyValuePair<TKey, TVal>
+  := new KeyValuePair<TKey, TVal>(key, value);
 
 function DictStr(params pairs: array of (string, string)): Dictionary<string, string>
   := Dict&<string, string>(pairs);
@@ -14098,11 +14151,57 @@ begin
   Result := Self.GroupBy(x->x).ToDictionary(g -> g.Key, g -> proj(g.Key));
 end;
 
-/// Операция удаления из словаря пары с указанным значением ключа
+/// Обновляет данные в словаре данными из другого словаря
+procedure Update<TKey, TVal>(Self: Dictionary<TKey, TVal>; update: Dictionary<TKey, TVal>); extensionmethod;
+begin
+  foreach var kv in update do
+    Self[kv.Key] := kv.Value;
+end;
+
+/// Обновляет данные в словаре данными из другого словаря
+procedure operator+=<TKey, TVal>(Self: Dictionary<TKey, TVal>; update: Dictionary<TKey, TVal>); extensionmethod;
+begin
+  foreach var kv in update do
+    Self[kv.Key] := kv.Value;
+end;
+
+/// Объединяет данные в двух словарях. Если в обоих имеются одинаковые ключи, то с ключом связывается значение из второго словаря
+function operator+<TKey, TVal>(Self: Dictionary<TKey, TVal>; dict: Dictionary<TKey, TVal>): Dictionary<TKey, TVal>; extensionmethod;
+begin
+  var d := PABCSystem.Dict(Self);
+  d += dict;
+  Result := d;
+end;
+
+/// Удаляет из словаря пары с указанным значением ключа
 procedure operator-=<Key,Value>(Self: IDictionary<Key,Value>; k: Key); extensionmethod;
 begin
   Self.Remove(k);
 end;
+
+/// Удаляет из словаря пары с указанными значениями ключа
+procedure operator-=<Key,Value>(Self: IDictionary<Key,Value>; keys: sequence of Key); extensionmethod;
+begin
+  foreach var k in keys do
+    Self.Remove(k);
+end;
+
+/// Возвращает словарь, в котором из исходного словаря удален элемент с данным ключом
+function operator-<TKey, TVal>(Self: Dictionary<TKey, TVal>; key: TKey): Dictionary<TKey, TVal>; extensionmethod;
+begin
+  var d := Dict(Self);
+  d -= key;
+  Result := d;
+end;
+
+/// Возвращает словарь, в котором из исходного словаря удалены все элементы с ключами, задаваемыми вторым операндом
+function operator-<TKey, TVal>(Self: Dictionary<TKey, TVal>; keys: sequence of TKey): Dictionary<TKey, TVal>; extensionmethod;
+begin
+  var d := Dict(Self);
+  d -= keys;
+  Result := d;
+end;
+
 
 // --------------------------------------------
 //>>      Методы расширения типа Tuple # Extension methods for Tuple
@@ -14380,7 +14479,14 @@ function operator><T1,T2,T3,T4,T5,T6,T7>(Self: (T1, T2, T3, T4,T5,T6,T7); v: (T1
 ///--
 function operator>=<T1,T2,T3,T4,T5,T6,T7>(Self: (T1, T2, T3, T4,T5,T6,T7); v: (T1, T2, T3, T4,T5,T6,T7)); extensionmethod := CompareToTup5(Self, v) >= 0;
 
-
+{
+///--
+function operator implicit<T>(a: array of T): set of T; extensionmethod; 
+begin
+  foreach var x in a do
+    Include(Result,x);
+end;
+}
 
 {// Определяет, есть ли указанный элемент в массиве
  function Contains<T>(self: array of T; x: T): boolean; extensionmethod;
