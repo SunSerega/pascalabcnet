@@ -1006,7 +1006,7 @@ pascal_set_const
                 is_set = true;
             if (is_set)   
 				$$ = new pascal_set_constant($2 as expression_list, @$);
-			else $$ = new array_const_new($2 as expression_list, @$); 				
+			else $$ = new array_const_new($2 as expression_list, '[', @$); 				
 		}
 	;
 
@@ -1017,7 +1017,7 @@ const_set
 		}
     | tkVertParen elem_list tkVertParen     
         { 
-			$$ = new array_const_new($2 as expression_list, @$);  
+			$$ = new array_const_new($2 as expression_list, '|', @$);  
 		}
     ;
 
@@ -4467,7 +4467,7 @@ variable
         }
     | tkVertParen elem_list tkVertParen     
         { 
-			$$ = new array_const_new($2 as expression_list, @$);  
+			$$ = new array_const_new($2 as expression_list, '|', @$);  
 		}
 	| pascal_set_const     
         { 
