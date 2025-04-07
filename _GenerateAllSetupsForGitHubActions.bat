@@ -1,14 +1,10 @@
-cd ReleaseGenerators\Samples\
+﻿cd ReleaseGenerators\Samples\
 del Pas /s /q
 del BF /s  /q
 del PL0 /s /q
 GetSamples.exe "..\..\InstallerSamples" Pas\
 GetSamples.exe _svn\BF BF
 GetSamples.exe _svn\PL0\ PL0\
-cd ..\..
-
-cd utils\DefaultLanguageResMaker\
-LanguageResMaker.exe
 cd ..\..
 
 Utils\IncrementVresion\IncrementVresion.exe Configuration\Version.defs REVISION 1
