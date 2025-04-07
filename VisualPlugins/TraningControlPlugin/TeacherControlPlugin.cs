@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
-using System.Text;
 using System.IO;
-using System.Linq;
-using PascalABCCompiler.SyntaxTreeConverters;
-using PascalABCCompiler.SyntaxTree;
-using DBAccessPluginNamespace;
+using VisualPascalABCPlugins.DBAccess;
 
 namespace VisualPascalABCPlugins
 {
@@ -16,6 +12,7 @@ namespace VisualPascalABCPlugins
         private const string LabelEntered = "Авторизация: ";
         private const string LabelNotEntered = "Авторизация: вход не выполнен";
         public static string StringsPrefix = "VPP_REGISTER_AND_CONTROL_PLUGIN_";
+        public static string ServerAddress = "https://air.mmcs.sfedu.ru/pascalabc";
         IVisualEnvironmentCompiler VisualEnvironmentCompiler;
 
         IWorkbench Workbench;
@@ -27,7 +24,7 @@ namespace VisualPascalABCPlugins
         private PluginGUIItem Item;
         public string Name { get => "Teacher Control Plugin"; }
         public string Version { get => "0.1"; }
-        public string Copyright { get => "Copyright © 2021-2023 by Stanislav Mikhalkovich"; }
+        public string Copyright { get => "Copyright © 2021-2025 by Stanislav Mikhalkovich"; }
 
         public string Login = null;
         public string Password = null;
@@ -51,7 +48,9 @@ namespace VisualPascalABCPlugins
             if (IsLightPTInWorkingDirectory())
             {
                 IsMechmath = System.Environment.MachineName.ToLower().StartsWith("mil8a-");
-                User.ServAddr = "https://air.mmcs.sfedu.ru/pascalabc";
+                // Попытаемся изменить ServerAddress если в папке есть server.dat
+                TryChangeServerAddress(ref ServerAddress);
+                User.ServAddr = ServerAddress;
                 loginForm = new LoginForm(this);
             }
             // RegisterForm.VisualEnvironmentCompiler = VisualEnvironmentCompiler; // Пока форма регистрации никак не связана с компилятором
@@ -93,6 +92,26 @@ namespace VisualPascalABCPlugins
             var WorkingDir = WorkingDirectory();
             var lightptname = Path.Combine(WorkingDir, "lightpt.dat");
             return File.Exists(lightptname);
+        }
+
+        public bool TryChangeServerAddress(ref string ServerAddress)
+        {
+            var WorkingDir = WorkingDirectory();
+            var server_dat_name = Path.Combine(WorkingDir, "server.dat");
+            if (File.Exists(server_dat_name))
+            {
+                try
+                {
+                    ServerAddress = System.IO.File.ReadAllText(server_dat_name).Trim();
+                    return true;
+                }
+                catch
+                {
+                    return false; // не поменяли ServerName
+                    // погасить исключение
+                }
+            }
+            return false;
         }
 
         public /*async*/ void TryLogin(string login, string pass)

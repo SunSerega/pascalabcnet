@@ -95,6 +95,18 @@ namespace TreeConverter.LambdaExpressions.Closure
             }
         }
 
+
+        // SSM 2024.01.09
+        public override void visit(let_var_expr letVarExpr)
+        {
+            ProcessNode(letVarExpr.ex);
+
+            _visitor.ProcessNode(letVarExpr);
+
+            SymbolInfo si = _visitor.context.find_first(letVarExpr.id.name);
+            _currentTreeNode.VariablesDefinedInScope.Add(new CapturedVariablesTreeNode.CapturedSymbolInfo(letVarExpr, si));
+        }
+
         public override void visit(statement_list stmtList)
         {
             if (stmtList.IsInternal) // просто обойти как продолжение объемлющего statement_list
@@ -227,8 +239,12 @@ namespace TreeConverter.LambdaExpressions.Closure
                                     si.sym_info.semantic_node_type == semantic_node_type.local_block_variable ||
                                     si.sym_info.semantic_node_type == semantic_node_type.common_parameter ||
                                     si.sym_info.semantic_node_type == semantic_node_type.class_field ||
-                                    si.sym_info.semantic_node_type == semantic_node_type.basic_property_node
+                                    si.sym_info.semantic_node_type == semantic_node_type.basic_property_node ||
+                                    si.sym_info.semantic_node_type == semantic_node_type.compiled_class_constant_definition
                                     ;
+            if (si.sym_info is var_definition_node && (si.sym_info as var_definition_node).type.type_special_kind == type_special_kind.array_wrapper)
+                acceptableVarType = false;
+
             //trjuk, chtoby ne perelopachivat ves kod. zamenjaem ident na self.ident
             // Использую этот трюк для нестатических полей предков - они не захватываются из-за плохого алгоритма захвата
             // aab 12.06.19 begin
@@ -257,6 +273,11 @@ namespace TreeConverter.LambdaExpressions.Closure
                 if (si.sym_info is class_field classField && classField.IsStatic)
                 {
                     dn = new dot_node(getClassIdent(classField.cont_type),
+                        new ident(id.name, id.source_context), id.source_context);
+                }
+                else if (si.sym_info is common_property_node cpn && cpn.polymorphic_state == polymorphic_state.ps_static)
+                {
+                    dn = new dot_node(getClassIdent(cpn.common_comprehensive_type),
                         new ident(id.name, id.source_context), id.source_context);
                 }
                 else if (si.sym_info is class_constant_definition ccd)
@@ -371,7 +392,7 @@ namespace TreeConverter.LambdaExpressions.Closure
                 {
                     /*if (si.sym_info.semantic_node_type == semantic_node_type.local_variable)
                     {
-                        if (!(idName == compiler_string_consts.self_word && si.scope is SymbolTable.ClassMethodScope && _classScope != null) && InLambdaContext)
+                        if (!(idName == PascalABCCompiler.StringConstants.self_word && si.scope is SymbolTable.ClassMethodScope && _classScope != null) && InLambdaContext)
                         {
                             _visitor.AddError(new ThisTypeOfVariablesCannotBeCaptured(_visitor.get_location(id)));
                         }
@@ -381,7 +402,7 @@ namespace TreeConverter.LambdaExpressions.Closure
                         _visitor.AddError(new CannotCaptureNonValueParameters(_visitor.get_location(id)));
                     }
                     
-                    if (idName == compiler_string_consts.self_word && si.scope is SymbolTable.ClassMethodScope &&
+                    if (idName == PascalABCCompiler.StringConstants.self_word && si.scope is SymbolTable.ClassMethodScope &&
                         _classScope != null)
                     {
                         var selfField = _classScope.VariablesDefinedInScope.Find(var => var.SymbolInfo == si);
@@ -553,17 +574,17 @@ namespace TreeConverter.LambdaExpressions.Closure
                         _visitor.AddError(loc, "LEFT_SIDE_CANNOT_BE_ASSIGNED_TO");
                 }
             }
-            else if (_visitor.context.is_in_cycle() && !SemanticRules.AllowChangeLoopVariable && to.semantic_node_type == semantic_node_type.namespace_variable_reference)
+            else if (_visitor.context.is_in_cycle() && !SemanticRulesConstants.AllowChangeLoopVariable && to.semantic_node_type == semantic_node_type.namespace_variable_reference)
             {
                 if (_visitor.context.is_loop_variable((to as namespace_variable_reference).var))
                     _visitor.AddError(to.location, "CANNOT_ASSIGN_TO_LOOP_VARIABLE");
             }
-            else if (_visitor.context.is_in_cycle() && !SemanticRules.AllowChangeLoopVariable && to.semantic_node_type == semantic_node_type.local_variable_reference)
+            else if (_visitor.context.is_in_cycle() && !SemanticRulesConstants.AllowChangeLoopVariable && to.semantic_node_type == semantic_node_type.local_variable_reference)
             {
                 if (_visitor.context.is_loop_variable((to as local_variable_reference).var))
                     _visitor.AddError(to.location, "CANNOT_ASSIGN_TO_LOOP_VARIABLE");
             }
-            else if (_visitor.context.is_in_cycle() && !SemanticRules.AllowChangeLoopVariable && to.semantic_node_type == semantic_node_type.local_block_variable_reference)
+            else if (_visitor.context.is_in_cycle() && !SemanticRulesConstants.AllowChangeLoopVariable && to.semantic_node_type == semantic_node_type.local_block_variable_reference)
             {
                 if (_visitor.context.is_loop_variable((to as local_block_variable_reference).var))
                     _visitor.AddError(to.location, "CANNOT_ASSIGN_TO_LOOP_VARIABLE");
@@ -620,8 +641,8 @@ namespace TreeConverter.LambdaExpressions.Closure
             type_node elemType = null;
             if (inWhat.type == null)
                 inWhat = tmp;
-            bool bb; // здесь bb не нужно. Оно нужно в foreach
-            _visitor.FindIEnumerableElementType(/*_foreach_stmt, */inWhat.type, ref elemType, out bb);
+            bool sys_coll_ienum;
+            _visitor.FindIEnumerableElementType(/*_foreach_stmt, */inWhat.type, ref elemType, out sys_coll_ienum);
 
             if (_foreach_stmt.type_name == null)
             {
@@ -655,7 +676,7 @@ namespace TreeConverter.LambdaExpressions.Closure
             if (!(vdn.type is compiled_generic_instance_type_node))
                 _visitor.convertion_data_and_alghoritms.check_convert_type_with_inheritance(vdn.type, elemType, _visitor.get_location(_foreach_stmt.identifier));
 
-            var fn = new foreach_node(vdn, inWhat, null, _visitor.get_location(_foreach_stmt));
+            var fn = new foreach_node(vdn, inWhat, null, elemType, !sys_coll_ienum, _visitor.get_location(_foreach_stmt));
             _visitor.context.enter_in_cycle(fn);
             _visitor.context.loop_var_stack.Push(vdn);
 

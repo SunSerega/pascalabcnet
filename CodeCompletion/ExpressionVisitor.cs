@@ -471,7 +471,7 @@ namespace CodeCompletion
 
         public override void visit(string_const _string_const)
         {
-            returned_scope = new ElementScope(entry_scope.FindName(PascalABCCompiler.TreeConverter.compiler_string_consts.string_type_name));
+            returned_scope = new ElementScope(entry_scope.FindName(StringConstants.string_type_name));
         }
 
         public override void visit(expression_list _expression_list)
@@ -961,7 +961,7 @@ namespace CodeCompletion
                         {
                             returned_scopes[i] = null;
                         }
-                        else if (left_scope is TypeScope && returned_scopes[i] is ProcScope && !(returned_scopes[i] as ProcScope).IsStatic && !(returned_scopes[i] as ProcScope).IsConstructor())
+                        else if (left_scope is TypeScope && returned_scopes[i] is ProcScope && !(returned_scopes[i] as ProcScope).IsStatic && !(returned_scopes[i] as ProcScope).IsConstructor() && !(returned_scope is TypeScope && (returned_scopes[i] as ProcScope).is_extension))
                         {
                             returned_scopes[i] = null;
                         }
@@ -1264,10 +1264,18 @@ namespace CodeCompletion
             method_call_cache[_method_call] = returned_scope;
         }
 
-        public override void visit(pascal_set_constant _pascal_set_constant)
+        public override void visit(pascal_set_constant psc)
         {
             //throw new NotImplementedException();
-            returned_scope = null;
+            // returned_scope = null;
+            
+            var dn = new dot_node(new ident(StringConstants.pascalSystemUnitName), new ident("Arr"), psc.source_context);
+            var el = new expression_list(psc.values.expressions[0], psc.source_context);
+            var nn = new method_call(dn, el, psc.source_context);
+            var dn1 = new dot_node(new ident(StringConstants.pascalSystemUnitName), new ident("__NewSetCreatorInternal"), psc.source_context);
+            var el1 = new expression_list(nn, psc.source_context);
+            var nn1 = new method_call(dn1, el1, psc.source_context);
+            visit(nn1);
         }
 
         public override void visit(array_const _array_const)
@@ -1450,7 +1458,7 @@ namespace CodeCompletion
                 if (returned_scope != null) returned_scope = new ElementScope(returned_scope);
             }
             else if (_typecast_node.cast_op == op_typecast.is_op)
-                returned_scope = new ElementScope(entry_scope.FindName(PascalABCCompiler.TreeConverter.compiler_string_consts.bool_type_name));
+                returned_scope = new ElementScope(entry_scope.FindName(StringConstants.bool_type_name));
         }
 
         public override void visit(interface_node _interface_node)
@@ -1546,7 +1554,7 @@ namespace CodeCompletion
 
         public override void visit(format_expr _format_expr)
         {
-            returned_scope = entry_scope.FindName(PascalABCCompiler.TreeConverter.compiler_string_consts.string_type_name);
+            returned_scope = entry_scope.FindName(StringConstants.string_type_name);
         }
 
         public override void visit(initfinal_part _initfinal_part)
@@ -1776,7 +1784,7 @@ namespace CodeCompletion
 
         public override void visit(sizeof_operator _sizeof_operator)
         {
-            returned_scope = new ElementScope(entry_scope.FindName(PascalABCCompiler.TreeConverter.compiler_string_consts.integer_type_name));
+            returned_scope = new ElementScope(entry_scope.FindName(StringConstants.integer_type_name));
         }
 
         public override void visit(typeof_operator _typeof_operator)
@@ -2041,17 +2049,17 @@ namespace CodeCompletion
 
             method_call mc = new method_call();
             mc.parameters = new expression_list(new List<expression> { _diapason_expr_new.left, _diapason_expr_new.right });
-            mc.dereferencing_value = new dot_node(new ident("PABCSystem"), new ident("InternalRange"));
+            mc.dereferencing_value = new dot_node(new ident(StringConstants.pascalSystemUnitName), new ident("InternalRange"));
             mc.visit(this);
         }
 
         public override void visit(array_const_new acn)
         {
             acn.elements.expressions[0].visit(this);
-            var rr = this.returned_scope;
+            //var rr = this.returned_scope;
             //var nn = new new_expr((syntax_type, plist, true, new SyntaxTree.array_const(acn.elements, acn.elements.source_context), acn.source_context);
             //var nn = new new_expr($2, el, true, $6 as array_const, @$);
-            var dn = new dot_node(new ident("PABCSystem"), new ident("Arr"), acn.source_context);
+            var dn = new dot_node(new ident(StringConstants.pascalSystemUnitName), new ident("Arr"), acn.source_context);
             var el = new expression_list(acn.elements.expressions[0], acn.source_context);
             var nn = new method_call(dn, el, acn.source_context);
             visit(nn);

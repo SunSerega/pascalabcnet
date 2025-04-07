@@ -1,31 +1,29 @@
 ﻿// Copyright (c) Ivan Bondarev, Stanislav Mikhalkovich (for details please see \doc\copyright.txt)
 // This code is distributed under the GNU LGPL (for details please see \doc\license.txt)
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using PascalABCCompiler.SyntaxTree;
 using SyntaxVisitors;
 using SyntaxVisitors.SugarVisitors;
 using SyntaxVisitors.CheckingVisitors;
 using SyntaxVisitors.PatternsVisitors;
+using PascalABCCompiler.SyntaxTreeConverters;
 
-namespace PascalABCCompiler.SyntaxTreeConverters
+namespace Languages.Pascal.Frontend.Converters
 {
-    public class StandardSyntaxTreeConverter: ISyntaxTreeConverter
+    public class StandardSyntaxTreeConverter : BaseSyntaxTreeConverter
     {
-        public string Name { get; } = "Standard";
-        public syntax_tree_node Convert(syntax_tree_node root)
+        public override string Name { get; } = "Standard";
+        
+        protected override syntax_tree_node ApplyConcreteConversions(syntax_tree_node root)
         {
-            // Прошивание ссылками на Parent nodes. Должно идти первым
-            // FillParentNodeVisitor расположен в SyntaxTree/tree как базовый визитор, отвечающий за построение дерева
-            //FillParentNodeVisitor.New.ProcessNode(root); // почему-то перепрошивает не всё. А следующий вызов - всё
             root.FillParentsInAllChilds();
 
+            var binder = new BindCollectLightSymInfo(root as compilation_unit);
 #if DEBUG
-//            var stat = new ABCStatisticsVisitor();
-//            stat.ProcessNode(root);
+            //            var stat = new ABCStatisticsVisitor();
+            //            stat.ProcessNode(root);
 #endif
+            // SSM 02.01.24
+            //LetExprVisitor.New.ProcessNode(root);
 
             // new range - до всего! До выноса выражения с лямбдой из foreach. 11.07 добавил поиск yields и присваивание pd.HasYield
             NewRangeDesugarAndFindHasYieldVisitor.New.ProcessNode(root);
@@ -38,7 +36,7 @@ namespace PascalABCCompiler.SyntaxTreeConverters
 
             // Выносим выражения с лямбдами из заголовка foreach + считаем максимум 10 вложенных лямбд
             StandOutExprWithLambdaInForeachSequenceAndNestedLambdasVisitor.New.ProcessNode(root);
-            VarNamesInMethodsWithSameNameAsClassGenericParamsReplacer.New.ProcessNode(root); // SSM bug fix #1147
+            new VarNamesInMethodsWithSameNameAsClassGenericParamsReplacer(root as compilation_unit).ProcessNode(root); 
             FindOnExceptVarsAndApplyRenameVisitor.New.ProcessNode(root);
 
             // loop
@@ -46,21 +44,23 @@ namespace PascalABCCompiler.SyntaxTreeConverters
 #if DEBUG
             //new SimplePrettyPrinterVisitor("D:/out.txt").ProcessNode(root);
 #endif
-
+            bool optimize_tuple_assign = true;
             // tuple_node
-            TupleVisitor.New.ProcessNode(root);
+            TupleVisitor.Create(optimize_tuple_assign).ProcessNode(root);
 
             // index 
             IndexVisitor.New.ProcessNode(root);
 
             // slice_expr и slice_expr_question
-            SliceDesugarVisitor.New.ProcessNode(root); 
+            SliceDesugarVisitor.New.ProcessNode(root);
             // поставил раньше AssignTuplesDesugarVisitor из за var (a,b) := a[1:3];
 
             // теперь коллизия с (a[1:6], a[6:11]):= (a[6:11], a[1:6]);
             // assign_tuple и assign_var_tuple
-            AssignTuplesDesugarVisitor.New.ProcessNode(root); // теперь это - на семантике
-
+            if (!optimize_tuple_assign)
+                AssignTuplesDesugarVisitor.New.ProcessNode(root); // теперь это - на семантике
+            else 
+                NewAssignTuplesDesugarVisitor.Create(binder).ProcessNode(root);
 
             // question_point_desugar_visitor
             QuestionPointDesugarVisitor.New.ProcessNode(root);
@@ -74,6 +74,7 @@ namespace PascalABCCompiler.SyntaxTreeConverters
             PatternsDesugaringVisitor.New.ProcessNode(root);  // Обязательно в этом порядке.
 #if DEBUG
             //new SimplePrettyPrinterVisitor("D:/out.txt").ProcessNode(root);
+            // TestAssignIsDefVisitor.New.ProcessNode(root);
 #endif
 
             // simple_property
@@ -85,6 +86,8 @@ namespace PascalABCCompiler.SyntaxTreeConverters
             ProcessYieldCapturedVarsVisitor.New.ProcessNode(root);
 
             CacheFunctionVisitor.New.ProcessNode(root);
+
+            ToExprVisitor.New.ProcessNode(root);
 
             // При наличии файла lightpt.dat подключает модули LightPT и Tasks
             root = TeacherControlConverter.New.Convert(root);

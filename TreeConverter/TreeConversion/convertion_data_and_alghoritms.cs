@@ -6,7 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 
 using PascalABCCompiler.SemanticTree;
+using PascalABCCompiler.SyntaxTree;
 using PascalABCCompiler.TreeRealization;
+using static PascalABCCompiler.SyntaxTree.SyntaxTreeBuilder;
 
 namespace PascalABCCompiler.TreeConverter
 {
@@ -655,7 +657,12 @@ namespace PascalABCCompiler.TreeConverter
 
             //TODO: А если наследование?
             possible_type_convertions pct = type_table.get_convertions(en.type,to);
-
+            if (pct.first == null && pct.second == null && en.type is delegated_methods && to.IsDelegate)
+            {
+                pct = type_table.get_convertions(to, en.type);
+                if (pct.first != null)
+                    return en;
+            }
 			if (pct.second!=null)
 			{
                 if (pct.second.to == null && en is typed_expression && !to.IsDelegate)
@@ -663,7 +670,13 @@ namespace PascalABCCompiler.TreeConverter
                     syntax_tree_visitor.try_convert_typed_expression_to_function_call(ref en);
                     return en;
                 }
-                AddError(new TwoTypeConversionsPossible(en,pct.first,pct.second));
+                if (en is null_const_node && pct.first.convertion_method is basic_function_node)
+                {
+                    en.type = to;
+                    return en;
+                }
+                else
+                    AddError(new TwoTypeConversionsPossible(en,pct.first,pct.second));
 			}
 
 			if (pct.first==null)
@@ -1079,7 +1092,7 @@ namespace PascalABCCompiler.TreeConverter
                                 internal_interface ii = cmc.obj.type.get_internal_interface(internal_interface_kind.bounded_array_interface);
                                 if (ii != null)
                                 {
-                                    if (cmc.function_node.name == compiler_string_consts.get_val_pascal_array_name)
+                                    if (cmc.function_node.name == StringConstants.get_val_pascal_array_name)
                                     {
                                         bounded_array_interface bai = (bounded_array_interface)ii;
                                         class_field cf = bai.int_array;
@@ -1154,7 +1167,7 @@ namespace PascalABCCompiler.TreeConverter
                         expression_node to = new simple_array_indexing(tc.var_ref,//factparams[formalparams.Count - 1],
                             new int_const_node(i - formalparams.Count + 1, factparams[i].location), aii.element_type, factparams[i].location);
                         expression_node from = factparams[i];
-                        statement_node stat = syntax_tree_visitor.find_operator(compiler_string_consts.assign_name, to, from, factparams[i].location);
+                        statement_node stat = syntax_tree_visitor.find_operator(StringConstants.assign_name, to, from, factparams[i].location);
                         tc.snl.AddElement(stat);
                     }
 
@@ -1189,22 +1202,97 @@ namespace PascalABCCompiler.TreeConverter
                                 expression_node to = new simple_array_indexing(tc.var_ref,//factparams[formalparams.Count - 1],
                                     new int_const_node(i - formalparams.Count + 1, factparams[i].location), aii.element_type, factparams[i].location);
                                 expression_node from = factparams[i];
-                                statement_node stat = syntax_tree_visitor.find_operator(compiler_string_consts.assign_name, to, from, factparams[i].location);
+                                statement_node stat = syntax_tree_visitor.find_operator(StringConstants.assign_name, to, from, factparams[i].location);
                                 tc.snl.AddElement(stat);
                             }
 
 						}
 						else
 						{
+                            // SSM 20/01/25 - Tuple<int,int> -> Tuple<double,double>
+                            // А если уже один такой conv есть? Как сливать несколько в один???
+                            if (formal_param_type.original_generic != null 
+                                && formal_param_type.original_generic.BaseFullName.StartsWith("System.Tuple`")
+                                && factparams[i].type.original_generic != null
+                                && factparams[i].type.original_generic.BaseFullName.StartsWith("System.Tuple`")
+                                && formal_param_type.instance_params.Count == factparams[i].type.instance_params.Count
+                                )
+                            {
+                                syntax_tree_visitor.contextChanger.SaveContextAndUpToGlobalLevel();
+                                var sl = new statement_list();
+                                var rettype = new semantic_type_node(formal_param_type);
+
+                                var el = new expression_list();
+                                for (int ii = 1; ii <= formal_param_type.instance_params.Count; ii++)
+                                    el.Add(new dot_node(new ident("x"), new ident("Item" + ii.ToString(),
+                                        factparams[i].location)));
+                                        //parameters[ii-1].location)));
+                                SyntaxTree.expression ex = new SyntaxTree.new_expr(rettype,el);
+                                sl.Add(new SyntaxTree.assign("Result", ex));
+                                // Определим функцию преобразования на внешнем уровне
+                                var fun = BuildSimpleFunctionOneParameter("_conv" + UniqueString(), "x",
+                                    new SyntaxTree.semantic_type_node(factparams[i].type),
+                                    rettype,
+                                    sl
+                                    );
+                                // Теперь ее надо обойти
+                                syntax_tree_visitor.ProcessNode(fun);
+                                // Теперь до нее доберемся
+                                var fn = syntax_tree_visitor.context.last_created_function.sym_info as function_node;
+                                syntax_tree_visitor.contextChanger.RestoreCurrentContext();
+                                possible_type_convertions ptci = new possible_type_convertions();
+                                ptci.first = new type_conversion(fn);
+                                ptci.second = null;
+                                ptci.from = factparams[i].type;
+                                ptci.to = formal_param_type;
+                                tc.AddElement(ptci);
+                                return tc;
+                            }
+
                             //issue #2161 - SSM 12.03.2020
                             //issue #348
-                            if (formal_param_type == SystemLibrary.SystemLibrary.object_type && factparams[i].type is delegated_methods)
+                            if ((formal_param_type == SystemLibrary.SystemLibrary.object_type || formal_param_type.IsDelegate) && factparams[i].type is delegated_methods)
                             {
                                 possible_type_convertions ptci = new possible_type_convertions();
                                 ptci.first = null;
                                 ptci.second = null;
+                                if (formal_param_type.instance_params != null && formal_param_type.instance_params.Count > 0)
+                                {
+                                    var fn = (factparams[i].type as delegated_methods).proper_methods[0].simple_function_node;
+                                    if (fn.is_generic_function)
+                                    {
+                                        var fn_instance = fn.get_instance(formal_param_type.instance_params, true, factparams[i].location);
+                                        delegated_methods dm = new delegated_methods();
+                                        if (fn is common_namespace_function_node)
+                                            dm.proper_methods.AddElement(new common_namespace_function_call(fn_instance as common_namespace_function_node, factparams[i].location));
+                                        else if (fn is common_method_node cmn && cmn.IsStatic)
+                                            dm.proper_methods.AddElement(new common_static_method_call(fn_instance as common_method_node, factparams[i].location));
+                                        else if (fn is common_method_node cmn2)
+                                            dm.proper_methods.AddElement(new common_method_call(fn_instance as common_method_node, ((factparams[i].type as delegated_methods).proper_methods[0] as common_method_call).obj, factparams[i].location));
+                                        factparams[i].type = dm;
+                                    }
+                                    else if (!is_alone_method_defined)
+                                        return null;
+                                }
+                                else if (!is_alone_method_defined && formal_param_type.IsDelegate)
+                                    return null;
                                 ptci.from = factparams[i].type;
                                 ptci.to = formal_param_type;
+                                if (formal_param_type.IsDelegate)
+                                {
+                                    var ttc = type_table.get_convertions(formal_param_type, factparams[i].type);
+                                    if (ttc.first == null)
+                                    {
+                                        if (is_alone_method_defined) // если мы сюда попали, то ошибка более явная
+                                        {
+                                            error = new CanNotConvertTypes(factparams[i], factparams[i].type, formal_param_type, locg);
+                                            return null;
+                                        }
+                                        else
+                                            return null;
+                                    }
+                                }
+                                
                                 tc.AddElement(ptci);
                                 factparams[i] = syntax_tree_visitor.CreateDelegateCall((factparams[i].type as delegated_methods).proper_methods[0]);
                                 //return tc;
@@ -1229,7 +1317,7 @@ namespace PascalABCCompiler.TreeConverter
                                 new int_const_node(i - formalparams.Count + 1, factparams[i].location), aii.element_type, factparams[i].location);
                             expression_node from = create_simple_function_call(ptc.first.convertion_method,
                                 factparams[i].location, factparams[i]);
-                            statement_node stat = syntax_tree_visitor.find_operator(compiler_string_consts.assign_name, to, from, factparams[i].location);
+                            statement_node stat = syntax_tree_visitor.find_operator(StringConstants.assign_name, to, from, factparams[i].location);
                             tc.snl.AddElement(stat);
                         }
 					}
@@ -1847,7 +1935,9 @@ namespace PascalABCCompiler.TreeConverter
 				{
                     if (ptc.first.from is null_type_node || ptc.second.to == null || ptc.second.from is null_type_node || ptc.second.from.is_generic_parameter)
                         continue; // SSM 9/12/20 fix 2363
-					AddError(new PossibleTwoTypeConversionsInFunctionCall(loc,ptc.first,ptc.second));
+                    if (ptc.first.from == ptc.second.from && ptc.first.to == ptc.second.to) // SSM fix 03/08/24 - непонятно, как до этого могло дойти
+                        continue;
+                    AddError(new PossibleTwoTypeConversionsInFunctionCall(loc,ptc.first,ptc.second));
 				}
 				
 			}
@@ -2146,8 +2236,8 @@ namespace PascalABCCompiler.TreeConverter
 
             bool is_alone_method_defined = (functions.Count() == 1);
             function_node first_function = functions.FirstOrDefault().sym_info as function_node;
-            bool _is_assigment = first_function.name == compiler_string_consts.assign_name;
-            bool is_op = compiler_string_consts.GetNETOperName(first_function.name) != null || first_function.name.ToLower() == "in";
+            bool _is_assigment = first_function.name == StringConstants.assign_name;
+            bool is_op = StringConstants.GetNETOperName(first_function.name) != null || first_function.name.ToLower() == "in";
             basic_function_node _tmp_bfn = functions.FirstOrDefault().sym_info as basic_function_node;
 
             List<function_node> indefinits = new List<function_node>();
@@ -2156,7 +2246,7 @@ namespace PascalABCCompiler.TreeConverter
             {
                 if (function.sym_info is compiled_function_node cfn0 &&
                     cfn0.comperehensive_type is compiled_type_node ctn0 &&
-                    (ctn0.compiled_type.Name == "PABCSystem" + compiler_string_consts.ImplementationSectionNamespaceName || ctn0.compiled_type.Name == "PABCExtensions" + compiler_string_consts.ImplementationSectionNamespaceName)
+                    (ctn0.compiled_type.Name == StringConstants.pascalSystemUnitName + StringConstants.ImplementationSectionNamespaceName || ctn0.compiled_type.Name == StringConstants.pascalExtensionsUnitName + StringConstants.ImplementationSectionNamespaceName)
                     && !ctn0.compiled_type.Assembly.FullName.StartsWith("PABCRtl")) // пропустить функции (методы расширения), определенные в сборке в ПИ PABCSystem, но не в PABCRtl.dll
                     continue;
                 // В режиме only_from_not_extensions пропускать все extensions
@@ -2217,17 +2307,61 @@ namespace PascalABCCompiler.TreeConverter
                     //TODO: Здесь нужно поправить, если создавать возможность вызова метода с параметрами по умолчанию из откомпилированной dll.
                     if (parameters.Count == fn.parameters.Count)
                     {
-                        function_node func = null;
-                        if ((func = is_exist_eq_method_in_list(fn, set_of_possible_functions)) != null)
+                        function_node fm = null;
+                        if ((fm = is_exist_eq_method_in_list(fn, set_of_possible_functions)) != null)
                         {
-                            if (!eq_type_nodes(fn.return_value_type, func.return_value_type))
+                            if (!eq_type_nodes(fn.return_value_type, fm.return_value_type))
                             {
-                                set_of_possible_functions[set_of_possible_functions.IndexOf(func)] = fn;
+                                set_of_possible_functions[set_of_possible_functions.IndexOf(fm)] = fn;
 
                             }
                             continue;
                         }
-                        set_of_possible_functions.Add(fn);
+                        else if ((fm = find_eq_method_in_list(fn, set_of_possible_functions)) != null)
+                        {
+                            // fn и fm могут быть также common_method_node
+                            // SSM 31/05/24 - добавляю в условия common_method_node. 
+                            // Это ошибка проектирования - много одинаковых свойств есть в compiled_function_node и common_method_node
+                              // но они не наследуются от единого предка. В результате весь этот ужас надо повторять везде по проекту. 
+                              // Это надо перепроектировать!!!
+                            polymorphic_state fn_ps = polymorphic_state.ps_common;
+                            polymorphic_state fm_ps = polymorphic_state.ps_common;
+                            if (fn is compiled_function_node)
+                                fn_ps = (fn as compiled_function_node).polymorphic_state;
+                            else if (fn is common_method_node)
+                                fn_ps = (fn as common_method_node).polymorphic_state;
+                            if (fm is compiled_function_node)
+                                fm_ps = (fm as compiled_function_node).polymorphic_state;
+                            else if (fm is common_method_node)
+                                fm_ps = (fm as common_method_node).polymorphic_state;
+
+                            ITypeNode fn_ct = null;
+                            ITypeNode fm_ct = null;
+                            if (fn is compiled_function_node)
+                                fn_ct = (fn as compiled_function_node).comperehensive_type;
+                            else if (fn is common_method_node)
+                                fn_ct = (fn as common_method_node).comperehensive_type;
+                            if (fm is compiled_function_node)
+                                fm_ct = (fm as compiled_function_node).comperehensive_type;
+                            else if (fm is common_method_node)
+                                fm_ct = (fm as common_method_node).comperehensive_type;
+
+                            // SSM 29/04/24 - небольшой рефакторинг для большей понятности
+                            if (fn_ps == polymorphic_state.ps_static || fm_ps == polymorphic_state.ps_static)
+                            {
+
+                            }
+                            // SSM 29/04/24 - добавил такое же условие что и в предыдущей ветке 
+                            else if (fn_ct != null && fm_ct != null 
+                                && ! (fn_ct.IsInterface || fm_ct.IsInterface)// для интерфейсов обрабатывается ниже
+                                && fn_ct != fm_ct)
+                            {
+                                // пропускается такая же функция, но из предка!
+                            }
+                            else set_of_possible_functions.Add(fn);
+                        }
+                        else   
+                            set_of_possible_functions.Add(fn);
                     }
                 }
                 if (parameters.Count > fn.parameters.Count)
@@ -2343,7 +2477,7 @@ namespace PascalABCCompiler.TreeConverter
             }
 
             possible_type_convertions_list_list tcll = new possible_type_convertions_list_list();
-
+            Dictionary<function_node, possible_type_convertions_list> last_chance_list = new Dictionary<function_node, possible_type_convertions_list>();
             for (int i = 0; i < set_of_possible_functions.Count; i++)
             {
                 Errors.Error err = null;
@@ -2361,6 +2495,7 @@ namespace PascalABCCompiler.TreeConverter
                         if (fact.type is delegated_methods dm)
                         {
                             var fact_is_function_with_return_value = dm.proper_methods.Count > 0 && dm.proper_methods[0].function.return_value_type != null;
+                           
                             var fact_is_lambda = syntax_nodes_parameters != null && k < syntax_nodes_parameters.Count && syntax_nodes_parameters[k] is SyntaxTree.function_lambda_definition;
                             var form_is_procedure = false;
                             var form_is_delegate = false;
@@ -2382,6 +2517,8 @@ namespace PascalABCCompiler.TreeConverter
                             if (fact_is_function_with_return_value && form_is_procedure)
                             {
                                 proc_func_or_lambdaAndNotDelegate_OK_flag = false;
+                                if (dm.proper_methods[0].function.return_value_type is lambda_any_type_node)
+                                    last_chance_list[set_of_possible_functions[i]] = tc;
                                 break;
                             }
                             if (fact_is_lambda && !form_is_delegate) // лямбда вместо не делегата - исключает функцию из рассмотрения
@@ -2445,6 +2582,12 @@ namespace PascalABCCompiler.TreeConverter
                 }
             }
 
+            if (set_of_possible_functions.Count == 0 && indefinits.Count == 0 && last_chance_list.Count == 1)
+            {
+                tcll.AddElement(last_chance_list.First().Value);
+                set_of_possible_functions.Add(last_chance_list.First().Key);
+            }
+
             if (set_of_possible_functions.Count == 0 && indefinits.Count == 0)
             {
                 if (_is_assigment && parameters.Count == 2)
@@ -2453,7 +2596,8 @@ namespace PascalABCCompiler.TreeConverter
                     err_out = new OperatorCanNotBeAppliedToThisTypes(_tmp_bfn.name, parameters[0], parameters[1], loc);
                 else if (is_op)
                     err_out = new OperatorCanNotBeAppliedToThisTypes(first_function.name, parameters[0], parameters.Count > 1 ? parameters[1] : null, loc);
-                else err_out = new NoFunctionWithSameArguments(FunctionName, loc, is_alone_method_defined);
+                else 
+                    err_out = new NoFunctionWithSameArguments(FunctionName, loc, is_alone_method_defined);
                 return set_of_possible_functions;
             }
 
@@ -2791,6 +2935,7 @@ namespace PascalABCCompiler.TreeConverter
                                 {
                                     var tlist = new List<function_node>();
                                     tlist.Add(f2);
+                                    convert_function_call_expressions(tlist[0], parameters, tcll[0]);
                                     return tlist;
                                 }
                             }
@@ -2868,6 +3013,7 @@ namespace PascalABCCompiler.TreeConverter
                         set_of_possible_functions.Remove(fn);
                     var tlist = new List<function_node>();
                     tlist.Add(set_of_possible_functions[0]);
+                    convert_function_call_expressions(tlist[0], parameters, tcll[0]);
                     return tlist;
                 }
             }
@@ -2877,12 +3023,14 @@ namespace PascalABCCompiler.TreeConverter
                 {
                     var tlist = new List<function_node>();
                     tlist.Add(set_of_possible_functions[1]);
+                    convert_function_call_expressions(tlist[0], parameters, tcll[0]);
                     return tlist;
                 }
                 else if (set_of_possible_functions[1].semantic_node_type == semantic_node_type.basic_function_node && set_of_possible_functions[0].semantic_node_type != semantic_node_type.basic_function_node)
                 {
                     var tlist = new List<function_node>();
                     tlist.Add(set_of_possible_functions[0]);
+                    convert_function_call_expressions(tlist[0], parameters, tcll[0]);
                     return tlist;
                 }
             }
@@ -3001,6 +3149,8 @@ namespace PascalABCCompiler.TreeConverter
 
                 // Теперь раз в list осталась одна функция, найти её в functions и только её и оставить
                 // Надо делать копию functions иначе это влияет на следующий код
+                if (list[0].is_generic_function_instance)
+                    list[0] = list[0].original_function;
                 var functions1 = functions.Where(fun => fun.sym_info == list[0]).ToList();
                 if (functions1.Count == 0)
                     return AddError<function_node>(new NoFunctionWithSameArguments(FunctionName, loc, true)); // это не должно случиться, но вдруг
@@ -3125,12 +3275,12 @@ namespace PascalABCCompiler.TreeConverter
 
 		private string get_return_variable_name(string function_name)
 		{
-			return (compiler_string_consts.function_return_value_prefix+function_name);
+			return (StringConstants.function_return_value_prefix+function_name);
 		}
 
         public void create_function_return_variable(common_function_node cfn, SymbolInfo ret_var)
         {
-            if (!SemanticRules.AddResultVariable)
+            if (!SemanticRulesConstants.AddResultVariable)
                 return;
 //#if (DEBUG)
             if (cfn.return_value_type == null)
@@ -3198,7 +3348,8 @@ namespace PascalABCCompiler.TreeConverter
                     ret_type = types[i];
                 else if (tc == type_compare.non_comparable_type)
                 {
-                    AddError(lst[i].location, "UNCOMPARABLE_TYPES_IN_ARRAY_CONST");
+                    if (!can_convert_type(types[i], ret_type))
+                        AddError(lst[i].location, "UNCOMPARABLE_TYPES_IN_ARRAY_CONST");
                 }
 
             }

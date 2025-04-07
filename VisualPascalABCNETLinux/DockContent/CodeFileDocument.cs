@@ -71,7 +71,7 @@ namespace VisualPascalABC
             TextEditor.EnableFolding = MainForm.UserOptions.EnableFolding; // SSM 4.09.08
             
 //            TextEditor.EnableFolding = MainForm.UserOptions.ShowLineNums;
-            TextEditor.ShowMatchingBracket = MainForm.UserOptions.ShowMathBraket;
+            TextEditor.ShowMatchingBracket = MainForm.UserOptions.ShowMatchBracket;
             TextEditor.ActiveTextAreaControl.TextArea.MouseClick += new MouseEventHandler(edit_MouseClick);
             TextEditor.Document.DocumentChanged += new ICSharpCode.TextEditor.Document.DocumentEventHandler(Document_DocumentChanged);
             TextEditor.ActiveTextAreaControl.SelectionManager.SelectionChanged += new EventHandler(SelectionManager_SelectionChanged);
@@ -600,7 +600,7 @@ namespace VisualPascalABC
                 if (event_description != null)
                 {
                     MethodInfo mi = event_description.e.EventType.GetMethod(
-                        PascalABCCompiler.TreeConverter.compiler_string_consts.invoke_method_name);
+                        StringConstants.invoke_method_name);
                     ParameterInfo[] pinfos = mi.GetParameters();
                     bool handler_found = false;
 

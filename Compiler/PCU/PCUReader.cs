@@ -16,10 +16,10 @@ namespace PascalABCCompiler.PCU
         BeginReadTree, EndReadTree, BeginSaveTree, EndSaveTree, ErrorSaveTree
     }
 
-    public class InvalidPCUFule: PascalABCCompiler.Errors.LocatedError
+    public class InvalidPCUFile: PascalABCCompiler.Errors.LocatedError
     {
         internal string UnitName;
-        public InvalidPCUFule(string UnitName)
+        public InvalidPCUFile(string UnitName)
         {
             this.UnitName = UnitName;
         }
@@ -223,7 +223,7 @@ namespace PascalABCCompiler.PCU
         {
 
             var FullUnitName = comp.FindPCUFileName(UnitName, dir, out _);
-            if (FullUnitName == null) throw new FileNotFound(UnitName, null);
+            if (FullUnitName == null) throw new Errors.FileNotFound(UnitName, null);
 
             return FullUnitName;
         }
@@ -263,6 +263,7 @@ namespace PascalABCCompiler.PCU
                 ms = new MemoryStream(File.ReadAllBytes(FileName));
                 br = new BinaryReader(ms);
                 ReadPCUHeader();
+
                 units[FileName] = this;
                 unit = new CompilationUnit();
                 unit.UnitFileName = FileName;
@@ -281,7 +282,7 @@ namespace PascalABCCompiler.PCU
                 
                 //TODO сохранить в PCU
                 cun.scope.CaseSensitive = false;
-                if (string.Compare(unit_name, compiler_string_consts.system_unit_file_name, true)==0)
+                if (string.Compare(unit_name, StringConstants.pascalSystemUnitName, true)==0)
                 	PascalABCCompiler.TreeConverter.syntax_tree_visitor.init_system_module(cun);
                 //ssyy
                 //Создаём область видимости для implementation - части
@@ -313,8 +314,20 @@ namespace PascalABCCompiler.PCU
                 AddTypeSynonyms(pcu_file.interface_synonyms_offset, cun.scope);
                 AddTypeSynonyms(pcu_file.implementation_synonyms_offset, cun.implementation_scope);
                 //\ssyy
-                
-
+                for (int i = 0; i < pcu_file.names.Length; i++)
+                {
+                    if (pcu_file.names[i].always_restore)
+                    {
+                        cun.scope.Find(pcu_file.names[i].name);
+                    }
+                }
+                for (int i = 0; i < pcu_file.implementation_names.Length; i++)
+                {
+                    if (pcu_file.implementation_names[i].always_restore)
+                    {
+                        cun.implementation_scope.Find(pcu_file.implementation_names[i].name);
+                    }
+                }
                 ChangeState(this, PCUReaderWriterState.EndReadTree, unit);
                 return unit;
             }
@@ -537,9 +550,8 @@ namespace PascalABCCompiler.PCU
 
         private void InvalidUnitDetected()
         {
-            //(ssyy) DarkStar - Почему бы в этом случае просто не перекомпилировать модуль?
             CloseUnit();
-            throw new InvalidPCUFule(unit_name);
+            throw new InvalidPCUFile(unit_name);
         }
         
         private static bool ReadPCUHead(PCUFile pcu_file, BinaryReader br)
@@ -549,6 +561,7 @@ namespace PascalABCCompiler.PCU
                 if (Header[i] != PCUFile.Header[i])
                     return false;
             pcu_file.Version = br.ReadInt16();
+            pcu_file.Revision = br.ReadInt32();
             pcu_file.CRC = br.ReadInt64();
             pcu_file.UseRtlDll = br.ReadBoolean();
             pcu_file.IncludeDebugInfo = br.ReadBoolean();
@@ -558,7 +571,7 @@ namespace PascalABCCompiler.PCU
         //чтение заголовка PCU
 		private void ReadPCUHeader()
 		{
-            if (!ReadPCUHead(pcu_file, br) || PCUFile.SupportedVersion != pcu_file.Version)
+            if (!ReadPCUHead(pcu_file, br) || PCUFile.SupportedVersion != pcu_file.Version || PCUFile.SupportedRevision != pcu_file.Revision)
                 InvalidUnitDetected();
             
             if(pcu_file.IncludeDebugInfo)
@@ -578,6 +591,7 @@ namespace PascalABCCompiler.PCU
 				pcu_file.names[i].offset = br.ReadInt32();
                 pcu_file.names[i].symbol_kind = (symbol_kind)br.ReadByte();
                 pcu_file.names[i].special_scope = br.ReadByte();
+                pcu_file.names[i].always_restore = br.ReadBoolean();
             }
             //ssyy
             num_names = br.ReadInt32();
@@ -588,6 +602,7 @@ namespace PascalABCCompiler.PCU
                 pcu_file.implementation_names[i].offset = br.ReadInt32();
                 pcu_file.implementation_names[i].symbol_kind = (symbol_kind)br.ReadByte();
                 pcu_file.implementation_names[i].special_scope = br.ReadByte();
+                pcu_file.implementation_names[i].always_restore = br.ReadBoolean();
             }
             //\ssyy
 			int num_incl = br.ReadInt32();
@@ -1320,7 +1335,7 @@ namespace PascalABCCompiler.PCU
                 	loc = ReadDebugInfo();
                 	type_node elem_type = GetTypeReference();
                 	int rank = br.ReadInt32();
-                	return type_constructor.instance.create_unsized_array(elem_type, null, rank, loc);
+                	return type_constructor.instance.create_unsized_array(elem_type, rank, loc);
                 case 6:
                     return GetTemplateInstance();
                 case 7:
@@ -1749,9 +1764,9 @@ namespace PascalABCCompiler.PCU
                 cmn.function_code = GetCode(br.ReadInt32());
             cmn.cont_type.methods.AddElement(cmn);
             if (cmn.name == "op_Equality")
-                cmn.cont_type.scope.AddSymbol(compiler_string_consts.eq_name, new SymbolInfo(cmn));
+                cmn.cont_type.scope.AddSymbol(StringConstants.eq_name, new SymbolInfo(cmn));
             else if (cmn.name == "op_Inequality")
-                cmn.cont_type.scope.AddSymbol(compiler_string_consts.noteq_name, new SymbolInfo(cmn));
+                cmn.cont_type.scope.AddSymbol(StringConstants.noteq_name, new SymbolInfo(cmn));
             return cmn;
         }
 
@@ -1832,7 +1847,10 @@ namespace PascalABCCompiler.PCU
             common_method_node raise_meth = null;
             if (CanReadObject())
             raise_meth = GetClassMethod(br.ReadInt32());
-            class_field cf = GetClassField(br.ReadInt32());
+            int field_off = br.ReadInt32();
+            class_field cf = null;
+            if (field_off > 0)
+                cf = GetClassField(field_off);
             common_type_node cont = (common_type_node)GetTypeReference(br.ReadInt32());
             if (name==null)
                 name = GetStringInClass(cont, name_ref);
@@ -1984,10 +2002,10 @@ namespace PascalABCCompiler.PCU
 		
         private void AddEnumOperators(common_type_node tctn)
         {
-        	/*basic_function_node enum_gr = SystemLibrary.SystemLibrary.make_binary_operator(compiler_string_consts.gr_name,tctn,SemanticTree.basic_function_type.enumgr,SystemLibrary.SystemLibrary.bool_type);
-            basic_function_node enum_greq = SystemLibrary.SystemLibrary.make_binary_operator(compiler_string_consts.greq_name,tctn,SemanticTree.basic_function_type.enumgreq,SystemLibrary.SystemLibrary.bool_type);
-            basic_function_node enum_sm = SystemLibrary.SystemLibrary.make_binary_operator(compiler_string_consts.sm_name,tctn,SemanticTree.basic_function_type.enumsm,SystemLibrary.SystemLibrary.bool_type);
-            basic_function_node enum_smeq = SystemLibrary.SystemLibrary.make_binary_operator(compiler_string_consts.smeq_name,tctn,SemanticTree.basic_function_type.enumsmeq,SystemLibrary.SystemLibrary.bool_type);*/
+        	/*basic_function_node enum_gr = SystemLibrary.SystemLibrary.make_binary_operator(StringConstants.gr_name,tctn,SemanticTree.basic_function_type.enumgr,SystemLibrary.SystemLibrary.bool_type);
+            basic_function_node enum_greq = SystemLibrary.SystemLibrary.make_binary_operator(StringConstants.greq_name,tctn,SemanticTree.basic_function_type.enumgreq,SystemLibrary.SystemLibrary.bool_type);
+            basic_function_node enum_sm = SystemLibrary.SystemLibrary.make_binary_operator(StringConstants.sm_name,tctn,SemanticTree.basic_function_type.enumsm,SystemLibrary.SystemLibrary.bool_type);
+            basic_function_node enum_smeq = SystemLibrary.SystemLibrary.make_binary_operator(StringConstants.smeq_name,tctn,SemanticTree.basic_function_type.enumsmeq,SystemLibrary.SystemLibrary.bool_type);*/
             compilation_context.add_convertions_to_enum_type(tctn);
         }
 
@@ -2004,7 +2022,7 @@ namespace PascalABCCompiler.PCU
 
         private List<SemanticTree.ICommonTypeNode> ReadGenericParams(common_namespace_node cur_nn)
         {
-            if (SemanticRules.RuntimeInitVariablesOfGenericParameters)
+            if (SemanticRulesConstants.RuntimeInitVariablesOfGenericParameters)
             {
                 if (!SystemLibrary.SystemLibInitializer.NeedsToRestore.Contains(
                     SystemLibrary.SystemLibInitializer.RuntimeInitializeFunction))
@@ -2241,9 +2259,9 @@ namespace PascalABCCompiler.PCU
 
             if (type_is_delegate)
             {
-                SymbolInfo sim = ctn.find_first_in_type(compiler_string_consts.invoke_method_name);
+                SymbolInfo sim = ctn.find_first_in_type(StringConstants.invoke_method_name);
                 common_method_node invoke_method = sim.sym_info as common_method_node;
-                sim = ctn.find_first_in_type(compiler_string_consts.default_constructor_name);
+                sim = ctn.find_first_in_type(StringConstants.default_constructor_name);
                 common_method_node constructor = sim.sym_info as common_method_node;
                 delegate_internal_interface dii = new delegate_internal_interface(invoke_method.return_value_type, invoke_method, constructor);
                 dii.parameters.AddRange(invoke_method.parameters);
@@ -2262,7 +2280,7 @@ namespace PascalABCCompiler.PCU
             {
                 foreach (common_type_node par in ctn.generic_params)
                 {
-                    SymbolInfo tsi = ctn.find_first_in_type(compiler_string_consts.generic_param_kind_prefix + par.name);
+                    SymbolInfo tsi = ctn.find_first_in_type(StringConstants.generic_param_kind_prefix + par.name);
                     if (tsi != null)
                     {
                         par.runtime_initialization_marker = tsi.sym_info as class_field;
@@ -2501,8 +2519,8 @@ namespace PascalABCCompiler.PCU
             {
                 if (ctn.fields[0].type is simple_array)
                 {
-                    ctn.find(TreeConverter.compiler_string_consts.upper_array_const_name);
-                    ctn.find(TreeConverter.compiler_string_consts.lower_array_const_name);
+                    ctn.find(StringConstants.upper_array_const_name);
+                    ctn.find(StringConstants.lower_array_const_name);
                     constant_node lower_bound = ctn.const_defs[1].const_value;
                     constant_node upper_bound = ctn.const_defs[0].const_value;
 
@@ -2567,7 +2585,7 @@ namespace PascalABCCompiler.PCU
 
                 si.symbol_kind = (symbol_kind)br.ReadByte();
                 si.semantic_node_type = (semantic_node_type)br.ReadByte();
-                si.virtual_slot = br.ReadBoolean();
+                si.always_restore = br.ReadBoolean();
                 si.is_static = br.ReadBoolean();
                 //Вроде это ненужно
                 //SymbolInfo si2 = scope.FindWithoutCreation(name);
@@ -3220,7 +3238,12 @@ namespace PascalABCCompiler.PCU
             var_definition_node vdn = GetLocalOrNamespaceVariableByOffset(br.ReadInt32());
             expression_node expr = CreateExpression();
             statement_node body = CreateStatement();
-            return new foreach_node(vdn, expr, body, null);
+            type_node elementType = null;
+            if (CanReadObject())
+                elementType = GetTypeReference();
+
+            bool isGeneric = br.ReadBoolean();
+            return new foreach_node(vdn, expr, body, elementType, isGeneric, null);
         }
 
         private statement_node CreateLock()

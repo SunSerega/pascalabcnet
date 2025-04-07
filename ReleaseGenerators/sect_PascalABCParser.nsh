@@ -2,7 +2,9 @@
     SectionIn 1 2 RO
     SetOutPath "$INSTDIR"
     File "..\bin\PascalABCParser.dll"
+    File "..\bin\PascalABCLanguageInfo.dll"
 	${AddFile} "PascalABCParser.dll"
+  ${AddFile} "PascalABCLanguageInfo.dll"
 ;    File "..\bin\PascalABCPartParser.dll"
     SetOutPath "$INSTDIR\Highlighting"
     File "..\bin\Highlighting\PascalABCNET.xshd"
@@ -11,6 +13,8 @@
     Call NGEN
 ;    Push "PascalABCPartParser.dll"
 ;    Call NGEN
+    Push "PascalABCLanguageInfo.dll"
+    Call NGEN
     SetOutPath "$INSTDIR\Ico"
     File "..\bin\Ico\pas.ico"
 	${AddFile} "pas.ico"

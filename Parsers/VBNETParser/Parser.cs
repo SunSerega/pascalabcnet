@@ -1,4 +1,4 @@
-﻿
+﻿/*
 using System;
 using System.IO;
 using PascalABCCompiler.ParserTools;
@@ -181,11 +181,6 @@ namespace PascalABCCompiler.VBNETParser
 			}
 		}
 		
-		public IPreprocessor Preprocessor {
-			get {
-				return null;
-			}
-		}
 
         public List<CompilerWarning> Warnings
         {
@@ -234,3 +229,4 @@ namespace PascalABCCompiler.VBNETParser
         }
 	}
 }
+*/

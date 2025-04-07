@@ -1,108 +1,23 @@
 ﻿// Copyright (c) Ivan Bondarev, Stanislav Mikhalkovich (for details please see \doc\copyright.txt)
 // This code is distributed under the GNU LGPL (for details please see \doc\license.txt)
-using System;
 using System.Collections.Generic;
-using System.Text;
 using PascalABCCompiler.Errors;
 using PascalABCCompiler.SyntaxTree;
+using System;
 
 namespace PascalABCCompiler.Parsers
 {
-    public abstract class BaseParser: IParser
+    public abstract class BaseParser : IParser
     {
+        public List<Error> Errors { get; protected set; } = new List<Error>();
 
-        public BaseParser(string name, string version, string copyright, 
-            bool caseSensitive, string[] filesExtensions)
-        {
-            this.name = name;
-            this.version = version;
-            this.copyright = copyright;
-            this.caseSensitive = caseSensitive;
-            this.filesExtensions = filesExtensions;
-        }
+        public List<CompilerWarning> Warnings { get; protected set; } = new List<CompilerWarning>();
 
-        List<Error> errors = new List<Error>();
-        public virtual List<Error> Errors
-        {
-            get
-            {
-                return errors;
-            }
-            set
-            {
-                errors = value;
-            }
-        }
+        public List<compiler_directive> CompilerDirectives { get; protected set; } = new List<compiler_directive>();
 
-        List<CompilerWarning> warnings = new List<CompilerWarning>();
-        public virtual List<CompilerWarning> Warnings
-        {
-            get
-            {
-                return warnings;
-            }
-            set
-            {
-                warnings = value;
-            }
-        }
+        public Func<bool> CheckIfParsingUnit { get; set; }
 
-        List<compiler_directive> compilerDirectives = new List<compiler_directive>();
-        public virtual List<compiler_directive> CompilerDirectives
-        {
-            get
-            {
-                return compilerDirectives;
-            }
-            set
-            {
-            	compilerDirectives = value;
-            }
-        }
-         
-
-        private bool caseSensitive;
-        public virtual bool CaseSensitive
-        {
-            get { return caseSensitive; }
-        }
-
-        string[] filesExtensions;
-        public string[] FilesExtensions
-        {
-            get { return filesExtensions; }
-        }
-
-        string name;
-        public string Name
-        {
-            get { return name; }
-        }
-
-        string version;
-        public string Version
-        {
-            get { return version; }
-        }
-
-        string copyright;
-        public string Copyright
-        {
-            get { return copyright; }
-        }
-
-        public SourceFilesProviderDelegate sourceFilesProvider = null;
-        public virtual SourceFilesProviderDelegate SourceFilesProvider
-        {
-            get
-            {
-                return sourceFilesProvider;
-            }
-            set
-            {
-                sourceFilesProvider = value;
-            }
-        }
+        public Dictionary<string, ParserTools.Directives.DirectiveInfo> ValidDirectives { get; protected set; }
 
         private ILanguageInformation languageInformation;
         public virtual ILanguageInformation LanguageInformation
@@ -115,18 +30,84 @@ namespace PascalABCCompiler.Parsers
             }
         }
 
-        public virtual PascalABCCompiler.SyntaxTree.syntax_tree_node BuildTree(string FileName, string Text, ParseMode ParseMode, List<string> DefinesList = null)
+        public BaseKeywords Keywords { get; protected set; }
+
+        /// <summary>
+        /// Возвращеает синтаксическое дерево модуля
+        /// </summary>
+        public SyntaxTree.compilation_unit GetCompilationUnit(string FileName, string Text, List<Error> Errors, List<CompilerWarning> Warnings, ParseMode parseMode, List<string> DefinesList = null)
         {
+            return GetSyntaxTreeChecked<SyntaxTree.compilation_unit>(FileName, Text, Errors, Warnings, parseMode, DefinesList);
+        }
+
+        public SyntaxTree.compilation_unit GetCompilationUnitForFormatter(string FileName, string Text, List<Error> Errors, List<CompilerWarning> Warnings)
+        {
+            return GetSyntaxTreeChecked<SyntaxTree.compilation_unit>(FileName, Text, Errors, Warnings, ParseMode.ForFormatter);
+        }
+
+        public SyntaxTree.expression GetExpression(string FileName, string Text, List<Error> Errors, List<CompilerWarning> Warnings)
+        {
+            try // SSM 06.09.18
+            {
+                return GetSyntaxTreeChecked<SyntaxTree.expression>(FileName, Text, Errors, Warnings, ParseMode.Expression);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public SyntaxTree.expression GetTypeAsExpression(string FileName, string Text, List<Error> Errors, List<CompilerWarning> Warnings)
+        {
+            return GetSyntaxTreeChecked<SyntaxTree.expression>(FileName, Text, Errors, Warnings, ParseMode.TypeAsExpression);
+        }
+
+        public SyntaxTree.statement GetStatement(string FileName, string Text, List<Error> Errors, List<CompilerWarning> Warnings)
+        {
+            return GetSyntaxTreeChecked<SyntaxTree.statement>(FileName, Text, Errors, Warnings, ParseMode.Statement);
+        }
+
+        /// <summary>
+        /// Обобщенная функция для получения различных синтаксических узлов c проверкой, что узел того типа, который ожидался
+        /// </summary>
+        private T GetSyntaxTreeChecked<T>(string FileName, string Text, List<Error> Errors, List<CompilerWarning> Warnings, ParseMode parseMode, List<string> DefinesList = null) where T : SyntaxTree.syntax_tree_node
+        {
+            syntax_tree_node unitNode = BuildTree(FileName, Text, Errors, Warnings, parseMode, DefinesList);
+
+            if (unitNode == null)
+                return null;
+
+            if (unitNode is T)
+                return unitNode as T;
+
+            Errors.Add(new UnexpectedNodeType(FileName, unitNode.source_context, null));
+
+            return null;
+        }
+
+        private void InitializeBeforeParsing(List<Error> Errors, List<CompilerWarning> Warnings)
+        {
+            this.Errors = Errors;
+            this.Warnings = Warnings;
+        }
+
+        protected virtual syntax_tree_node BuildTree(string FileName, string Text, List<Error> Errors, List<CompilerWarning> Warnings, ParseMode ParseMode, List<string> DefinesList = null)
+        {
+            InitializeBeforeParsing(Errors, Warnings);
+            
             syntax_tree_node root = null;
 
             PreBuildTree(FileName);
             switch (ParseMode)
             {
                 case ParseMode.Normal:
-                    root = BuildTreeInNormalMode(FileName, Text);
+                    root = BuildTreeInNormalMode(FileName, Text, DefinesList);
                     break;
                 case ParseMode.Expression:
                     root = BuildTreeInExprMode(FileName, Text);
+                    break;
+                case ParseMode.TypeAsExpression:
+                    root = BuildTreeInTypeExprMode(FileName, Text);
                     break;
                 case ParseMode.Special:
                     root = BuildTreeInSpecialMode(FileName, Text);
@@ -141,67 +122,37 @@ namespace PascalABCCompiler.Parsers
                     break;
             }
 
-            if (root != null && root is compilation_unit)
+            if (root != null && root is compilation_unit compilationUnit)
             {
-                (root as compilation_unit).file_name = FileName;
-                (root as compilation_unit).compiler_directives = CompilerDirectives;
-                if (root is unit_module)
-                    if ((root as unit_module).unit_name.HeaderKeyword == UnitHeaderKeyword.Library)
-                        (root as compilation_unit).compiler_directives.Add(new compiler_directive(new token_info("apptype"), new token_info("dll")));
+                compilationUnit.file_name = FileName;
+                compilationUnit.compiler_directives = CompilerDirectives;
+
+                if (root is unit_module unitModule)
+                    if (unitModule.unit_name.HeaderKeyword == UnitHeaderKeyword.Library)
+                        unitModule.compiler_directives.Add(new compiler_directive(new token_info("apptype"), new token_info("dll")));
             }
 
             return root;
         }
 
-        public virtual void PreBuildTree(string FileName)
-        {
+        protected virtual void PreBuildTree(string FileName) { }
 
-        }
+        protected abstract syntax_tree_node BuildTreeInNormalMode(string FileName, string Text, List<string> DefinesList = null);
 
-        public virtual syntax_tree_node BuildTreeInNormalMode(string FileName, string Text, List<string> DefinesList = null)
-        {
-            return null;
-        }
+        protected abstract syntax_tree_node BuildTreeInTypeExprMode(string FileName, string Text);
 
-        public virtual syntax_tree_node BuildTreeInTypeExprMode(string FileName, string Text)
-        {
-            return null;
-        }
+        protected abstract syntax_tree_node BuildTreeInExprMode(string FileName, string Text);
 
-        public virtual syntax_tree_node BuildTreeInExprMode(string FileName, string Text)
-        {
-            return null;
-        }
+        protected abstract syntax_tree_node BuildTreeInSpecialMode(string FileName, string Text);
 
-        public virtual syntax_tree_node BuildTreeInSpecialMode(string FileName, string Text)
-        {
-            return null;
-        }
+        protected abstract syntax_tree_node BuildTreeInFormatterMode(string FileName, string Text);
 
-        public virtual syntax_tree_node BuildTreeInFormatterMode(string FileName, string Text)
-        {
-            return null;
-        }
-
-        public virtual syntax_tree_node BuildTreeInStatementMode(string FileName, string Text)
-        {
-            return null;
-        }
+        protected abstract syntax_tree_node BuildTreeInStatementMode(string FileName, string Text);
 
         public virtual void Reset()
         {
             // если нужно - переопределяйте
         }        
-
-        public virtual IPreprocessor Preprocessor
-        {
-            get { return null; }
-        }
-
-        public override string ToString()
-        {
-            return Name + " Language Parser v" + Version;
-        }
 
     }
 }

@@ -333,12 +333,6 @@ namespace PascalABCCompiler
         }
         private static void ChangeCompilerState(ICompiler sender, PascalABCCompiler.CompilerState State, string FileName)
         {
-            switch (State)
-            {
-                case CompilerState.ParserConnected:
-                    Console.WriteLine(string.Format(StringResourcesGet("CONNECTED_PARSER{0}"),sender.ParsersController.LastParser));
-                    return;
-            }
             if (DetailOut)
             {
                 Console.ForegroundColor = ConsoleColor.Gray;
@@ -374,7 +368,7 @@ namespace PascalABCCompiler
             DateTime ldt = DateTime.Now;
             Compiler = new PascalABCCompiler.Compiler(null,ChangeCompilerState);
             //GC.Collect();
-            WriteColorText(Compiler.Banner + "\nCopyright (c) 2005-2023 by Ivan Bondarev, Stanislav Mikhalkovich\n", ConsoleColor.Green);
+            WriteColorText(Compiler.Banner + "\nCopyright (c) 2005-2024 by Ivan Bondarev, Stanislav Mikhalkovich\n", ConsoleColor.Green);
             Console.WriteLine("OK {0}ms", (DateTime.Now - ldt).TotalMilliseconds);
             if (Compiler.SupportedSourceFiles.Length == 0)
                 WriteColorText(StringResourcesGet("ERROR_PARSERS_NOT_FOUND")+Environment.NewLine, ConsoleColor.Red);
@@ -444,6 +438,10 @@ namespace PascalABCCompiler
             OutputDirectory="";
             
             Console.Title = StringResourcesGet("STARTING");
+
+            // загрузка всех парсеров и других составляющих языков  EVA
+            Languages.Integration.LanguageIntegrator.LoadAllLanguages();
+            
             Reset();
             Console.Title = Compiler.Banner;
             

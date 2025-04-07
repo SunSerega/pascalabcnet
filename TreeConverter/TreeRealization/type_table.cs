@@ -620,7 +620,7 @@ namespace PascalABCCompiler.TreeRealization
                             if (interf_original_generic != null && interf_original_generic == base_original_generic)
                             {
                                 // Нам нужно два original_generic as compiled_type_node и два instance_params
-                                
+
                                 //if (ctcgi != null) // по идее это всегда так! потому что cgitn - compiled - поэтому закомментировал SSM 14/02/23
                                 // теперь надо проверить параметры на ковариантность - все
                                 var n = base_instance_params.Count;
@@ -632,7 +632,7 @@ namespace PascalABCCompiler.TreeRealization
                                 if (n != n1)
                                     impl = false;
                                 else
-                                    for (int i=0; i<n; i++)
+                                    for (int i = 0; i < n; i++)
                                     {
                                         // ctcgi.compiled_type - это System.Type
                                         if ((interf_compiled_type.GetGenericArguments()[i].GenericParameterAttributes & System.Reflection.GenericParameterAttributes.Covariant) != 0)
@@ -663,6 +663,17 @@ namespace PascalABCCompiler.TreeRealization
                                 implements = impl;
                                 if (implements)
                                     break;
+                            }
+                        }
+                        else if (interf is common_generic_instance_type_node cictn && base_class is common_generic_instance_type_node cbctn)
+                        {
+                            foreach (type_node impltn in cictn.ImplementingInterfaces)
+                            {
+                                if (is_type_or_original_generics_equal(impltn, cbctn))
+                                {
+                                    implements = true;
+                                    break;
+                                }
                             }
                         }
                         else if (interf is compiled_type_node ictn && base_class is compiled_type_node bctn)
@@ -848,7 +859,8 @@ namespace PascalABCCompiler.TreeRealization
             }
             else
             {
-                ptc.second = new type_conversion(fn);
+                if (ptc.first.convertion_method != fn) // SSM 04/08/24 !!! - это когда есть op_implicit(Typ<integer>): Typ<byte>
+                    ptc.second = new type_conversion(fn);
             }
             ptc.from = from;
             ptc.to = to;
@@ -946,7 +958,7 @@ namespace PascalABCCompiler.TreeRealization
                 null_const_node ncn = new null_const_node(_to, call_location);
                 null_const_node ncn2 = new null_const_node(_to, call_location);
 
-                PascalABCCompiler.TreeConverter.SymbolInfo si = pr.type.find_first_in_type(PascalABCCompiler.TreeConverter.compiler_string_consts.eq_name);
+                PascalABCCompiler.TreeConverter.SymbolInfo si = pr.type.find_first_in_type(StringConstants.eq_name);
 
                 basic_function_node fn = si.sym_info as basic_function_node;
                 expression_node condition = null;
@@ -1126,6 +1138,20 @@ namespace PascalABCCompiler.TreeRealization
                     {
                         //ms100 error fixed (DS)
                         bool eq = TreeConverter.convertion_data_and_alghoritms.function_eq_params_and_result(dii.invoke_method, to_dii.invoke_method);
+                        if (eq)
+                        {
+                            delegate_to_delegate_type_converter dtdtc = new delegate_to_delegate_type_converter(to);
+                            add_conversion(ret, new convert_types_function_node(dtdtc.convert_delegates_to_delegates, false), from, to);
+                        }
+                    }
+                }
+                else if (to is delegated_methods && (to as delegated_methods).proper_methods.Count > 0)
+                {
+                    var proper_meth = (to as delegated_methods).proper_methods[0].simple_function_node;
+                    if (dii.parameters.Count == proper_meth.parameters.Count)
+                    {
+                        //ms100 error fixed (DS)
+                        bool eq = TreeConverter.convertion_data_and_alghoritms.function_eq_params_and_result(dii.invoke_method, proper_meth);
                         if (eq)
                         {
                             delegate_to_delegate_type_converter dtdtc = new delegate_to_delegate_type_converter(to);

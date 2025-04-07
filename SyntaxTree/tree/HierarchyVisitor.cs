@@ -2093,6 +2093,38 @@ namespace PascalABCCompiler.SyntaxTree
 		{
 		}
 
+		public virtual void pre_do_visit(let_var_expr _let_var_expr)
+		{
+		}
+
+		public virtual void post_do_visit(let_var_expr _let_var_expr)
+		{
+		}
+
+		public virtual void pre_do_visit(to_expr _to_expr)
+		{
+		}
+
+		public virtual void post_do_visit(to_expr _to_expr)
+		{
+		}
+
+		public virtual void pre_do_visit(global_statement _global_statement)
+		{
+		}
+
+		public virtual void post_do_visit(global_statement _global_statement)
+		{
+		}
+
+		public virtual void pre_do_visit(list_generator _list_generator)
+		{
+		}
+
+		public virtual void post_do_visit(list_generator _list_generator)
+		{
+		}
+
 		public override void visit(expression _expression)
 		{
 			DefaultVisit(_expression);
@@ -4324,6 +4356,43 @@ namespace PascalABCCompiler.SyntaxTree
 			visit(ref_var_def_statement.var);
 			visit(ref_var_def_statement.initial_value);
 			post_do_visit(_ref_var_def_statement);
+		}
+
+		public override void visit(let_var_expr _let_var_expr)
+		{
+			DefaultVisit(_let_var_expr);
+			pre_do_visit(_let_var_expr);
+			visit(let_var_expr.id);
+			visit(let_var_expr.ex);
+			post_do_visit(_let_var_expr);
+		}
+
+		public override void visit(to_expr _to_expr)
+		{
+			DefaultVisit(_to_expr);
+			pre_do_visit(_to_expr);
+			visit(to_expr.key);
+			visit(to_expr.value);
+			post_do_visit(_to_expr);
+		}
+
+		public override void visit(global_statement _global_statement)
+		{
+			DefaultVisit(_global_statement);
+			pre_do_visit(_global_statement);
+			visit(global_statement.idents);
+			post_do_visit(_global_statement);
+		}
+
+		public override void visit(list_generator _list_generator)
+		{
+			DefaultVisit(_list_generator);
+			pre_do_visit(_list_generator);
+			visit(list_generator._expr);
+			visit(list_generator._ident);
+			visit(list_generator._range);
+			visit(list_generator._condition);
+			post_do_visit(_list_generator);
 		}
 	}
 

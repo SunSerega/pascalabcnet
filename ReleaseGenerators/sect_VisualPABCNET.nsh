@@ -46,12 +46,15 @@
     ${AddFile} "RunUnitTests.exe"
 	
     SetOutPath "$INSTDIR\Temp"
+    SetOutPath "$INSTDIR\LanguageKits"
     SetOutPath "$INSTDIR"
     Push "Pause.exe"
     Call NGEN
 
     ;Временно
     ;Delete "$INSTDIR\PascalABCNET.ini"
+
+    CreateShortcut "$COMMONSTARTMENU\PascalABC.NET\PascalABC.NET.lnk" "$INSTDIR\PascalABCNET.exe"
 
     CreateShortCut "$DESKTOP\PascalABCNET.lnk" "$INSTDIR\PascalABCNET.exe"
     CreateShortCut "$SMPROGRAMS\PascalABC.NET\PascalABC.NET.lnk" "$INSTDIR\PascalABCNET.exe" 

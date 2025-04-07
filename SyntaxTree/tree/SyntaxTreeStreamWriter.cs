@@ -1582,7 +1582,15 @@ namespace PascalABCCompiler.SyntaxTree
 					}
 				}
 			}
-			bw.Write((byte)_compilation_unit.Language);
+			if (_compilation_unit.Language == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				bw.Write(_compilation_unit.Language);
+			}
 		}
 
 
@@ -6945,6 +6953,7 @@ namespace PascalABCCompiler.SyntaxTree
 				bw.Write((byte)1);
 				_array_const_new.elements.visit(this);
 			}
+			bw.Write(_array_const_new.braces_type);
 		}
 
 
@@ -7140,6 +7149,135 @@ namespace PascalABCCompiler.SyntaxTree
 			{
 				bw.Write((byte)1);
 				_ref_var_def_statement.initial_value.visit(this);
+			}
+		}
+
+
+		public void visit(let_var_expr _let_var_expr)
+		{
+			bw.Write((Int16)261);
+			write_let_var_expr(_let_var_expr);
+		}
+
+		public void write_let_var_expr(let_var_expr _let_var_expr)
+		{
+			write_expression(_let_var_expr);
+			if (_let_var_expr.id == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_let_var_expr.id.visit(this);
+			}
+			if (_let_var_expr.ex == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_let_var_expr.ex.visit(this);
+			}
+		}
+
+
+		public void visit(to_expr _to_expr)
+		{
+			bw.Write((Int16)262);
+			write_to_expr(_to_expr);
+		}
+
+		public void write_to_expr(to_expr _to_expr)
+		{
+			write_expression(_to_expr);
+			if (_to_expr.key == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_to_expr.key.visit(this);
+			}
+			if (_to_expr.value == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_to_expr.value.visit(this);
+			}
+		}
+
+
+		public void visit(global_statement _global_statement)
+		{
+			bw.Write((Int16)263);
+			write_global_statement(_global_statement);
+		}
+
+		public void write_global_statement(global_statement _global_statement)
+		{
+			write_statement(_global_statement);
+			if (_global_statement.idents == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_global_statement.idents.visit(this);
+			}
+		}
+
+
+		public void visit(list_generator _list_generator)
+		{
+			bw.Write((Int16)264);
+			write_list_generator(_list_generator);
+		}
+
+		public void write_list_generator(list_generator _list_generator)
+		{
+			write_expression(_list_generator);
+			if (_list_generator._expr == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_list_generator._expr.visit(this);
+			}
+			if (_list_generator._ident == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_list_generator._ident.visit(this);
+			}
+			if (_list_generator._range == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_list_generator._range.visit(this);
+			}
+			if (_list_generator._condition == null)
+			{
+				bw.Write((byte)0);
+			}
+			else
+			{
+				bw.Write((byte)1);
+				_list_generator._condition.visit(this);
 			}
 		}
 

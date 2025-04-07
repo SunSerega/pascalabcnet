@@ -4,19 +4,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Text;
 using System.Windows.Forms;
 using System.IO;
 using VisualPascalABCPlugins;
-using VisualPascalABC.Utils;
 using System.Threading;
 using System.Runtime.InteropServices;
-using WeifenLuo.WinFormsUI.Docking;
 using VisualPascalABC.OptionsContent;
 using System.Security.Permissions;
-using System.ComponentModel.Design;
 
 //using ICSharpCode.FormsDesigner;
 //using ICSharpCode.SharpDevelop.Gui;
@@ -681,11 +676,12 @@ namespace VisualPascalABC
         {
             MPanel_Resize(null, EventArgs.Empty);
             BPanel_Resize(null, EventArgs.Empty);
-            //MPanel_.OnResize(EventArgs.Empty);
-            //BPanel.OnResize(EventArgs.Empty);
+
             if (_mainFormWindowStateMaximized)
                 this.WindowState = FormWindowState.Maximized;
-            //PascalABCCompiler.StringResourcesLanguage.CurrentLanguageName = "Russi         
+
+            // загрузка всех парсеров и других составляющих языков  EVA
+            Languages.Integration.LanguageIntegrator.LoadAllLanguages();
 
             ChangedSelectedTab();
             VisualEnvironmentCompiler.ChangeVisualEnvironmentState += new ChangeVisualEnvironmentStateDelegate(VisualEnvironmentCompiler_ChangeVisualEnvironmentState);
@@ -1749,6 +1745,13 @@ namespace VisualPascalABC
 
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
+            // Пока что такая временная мера для всех языков, кроме Паскаля  EVA
+            if (Languages.Facade.LanguageProvider.Instance.SelectLanguageByExtensionSafe(CurrentSourceFileName)?.Name != PascalABCCompiler.StringConstants.pascalLanguageName)
+            {
+                ErrorsListWindow.ShowErrorsSync(new List<PascalABCCompiler.Errors.Error>() { new PascalABCCompiler.Errors.Error(Form1StringResources.Get("PABCHEALTH_NOT_SUPPORTED")) }, true);
+                return;
+            }
+
             if (ABCHealthForm == null)
             {
                 ABCHealthForm = new ABCHealth();
@@ -1762,7 +1765,6 @@ namespace VisualPascalABC
                 var aw = ABCHealthForm.Width;
                 var ah = ABCHealthForm.Height;
                 var c = new PascalABCCompiler.Compiler();
-                c.Reload();
                 var errors = new List<PascalABCCompiler.Errors.Error>();
                 var warnings = new List<PascalABCCompiler.Errors. CompilerWarning>();
 

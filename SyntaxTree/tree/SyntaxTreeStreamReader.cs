@@ -542,6 +542,14 @@ namespace PascalABCCompiler.SyntaxTree
 					return new lambda_any_type_node_syntax();
 				case 260:
 					return new ref_var_def_statement();
+				case 261:
+					return new let_var_expr();
+				case 262:
+					return new to_expr();
+				case 263:
+					return new global_statement();
+				case 264:
+					return new list_generator();
 			}
 			return null;
 		}
@@ -1472,7 +1480,14 @@ namespace PascalABCCompiler.SyntaxTree
 					_compilation_unit.compiler_directives.Add(_read_node() as compiler_directive);
 				}
 			}
-			_compilation_unit.Language = (LanguageId)br.ReadByte();
+			if (br.ReadByte() == 0)
+			{
+				_compilation_unit.Language = null;
+			}
+			else
+			{
+				_compilation_unit.Language = br.ReadString();
+			}
 		}
 
 
@@ -4444,6 +4459,7 @@ namespace PascalABCCompiler.SyntaxTree
 		{
 			read_addressed_value(_array_const_new);
 			_array_const_new.elements = _read_node() as expression_list;
+			_array_const_new.braces_type = br.ReadChar();
 		}
 
 
@@ -4545,6 +4561,59 @@ namespace PascalABCCompiler.SyntaxTree
 			read_declaration(_ref_var_def_statement);
 			_ref_var_def_statement.var = _read_node() as ident;
 			_ref_var_def_statement.initial_value = _read_node() as addressed_value;
+		}
+
+
+		public void visit(let_var_expr _let_var_expr)
+		{
+			read_let_var_expr(_let_var_expr);
+		}
+
+		public void read_let_var_expr(let_var_expr _let_var_expr)
+		{
+			read_expression(_let_var_expr);
+			_let_var_expr.id = _read_node() as ident;
+			_let_var_expr.ex = _read_node() as expression;
+		}
+
+
+		public void visit(to_expr _to_expr)
+		{
+			read_to_expr(_to_expr);
+		}
+
+		public void read_to_expr(to_expr _to_expr)
+		{
+			read_expression(_to_expr);
+			_to_expr.key = _read_node() as expression;
+			_to_expr.value = _read_node() as expression;
+		}
+
+
+		public void visit(global_statement _global_statement)
+		{
+			read_global_statement(_global_statement);
+		}
+
+		public void read_global_statement(global_statement _global_statement)
+		{
+			read_statement(_global_statement);
+			_global_statement.idents = _read_node() as ident_list;
+		}
+
+
+		public void visit(list_generator _list_generator)
+		{
+			read_list_generator(_list_generator);
+		}
+
+		public void read_list_generator(list_generator _list_generator)
+		{
+			read_expression(_list_generator);
+			_list_generator._expr = _read_node() as expression;
+			_list_generator._ident = _read_node() as ident;
+			_list_generator._range = _read_node() as expression;
+			_list_generator._condition = _read_node() as expression;
 		}
 
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) Ivan Bondarev, Stanislav Mikhalkovich (for details please see \doc\copyright.txt)
+﻿// Copyright (c) Ivan Bondarev, Stanislav Mikhalkovich (for details please see \doc\copyright.txt)
 // This code is distributed under the GNU LGPL (for details please see \doc\license.txt)
 //Здесь описана реализация generic-типов
 //Файлом владеет ssyy.
@@ -50,12 +50,12 @@ namespace PascalABCCompiler.TreeRealization
         public static void add_default_ctor(common_type_node param)
         {
             common_method_node cnode = new common_method_node(
-                compiler_string_consts.default_constructor_name, param, null,
+                StringConstants.default_constructor_name, param, null,
                 param, SemanticTree.polymorphic_state.ps_common,
                 SemanticTree.field_access_level.fal_public, null);
             cnode.is_constructor = true;
             param.methods.AddElement(cnode);
-            param.add_name(compiler_string_consts.default_constructor_name, new SymbolInfo(cnode));
+            param.add_name(StringConstants.default_constructor_name, new SymbolInfo(cnode));
             param.has_default_constructor = true;
             param.has_explicit_default_constructor = true;
         }
@@ -374,7 +374,7 @@ namespace PascalABCCompiler.TreeRealization
             SystemLibrary.SystemLibrary.init_reference_type(instance);
             instance.conform_basic_functions();
             //(ssyy) Нужно, чтобы добавились конструкторы
-            //ctnode.find_in_type(compiler_string_consts.default_constructor_name);
+            //ctnode.find_in_type(StringConstants.default_constructor_name);
             instance.instance_params = param_types;
 
             property_node orig_pn = original.default_property_node;
@@ -508,7 +508,7 @@ namespace PascalABCCompiler.TreeRealization
                 type_node elem_tp = determine_type(ii.element_type, param_types, method_param_types, generic_param_types);
                 if (elem_tp != ii.element_type)
                 {
-                    return SystemLibrary.SystemLibrary.syn_visitor.convertion_data_and_alghoritms.type_constructor.create_unsized_array(elem_tp, null, ii.rank, null);
+                    return SystemLibrary.SystemLibrary.syn_visitor.convertion_data_and_alghoritms.type_constructor.create_unsized_array(elem_tp, ii.rank, null);
                 }
                 return tn;
             }
@@ -555,7 +555,7 @@ namespace PascalABCCompiler.TreeRealization
                     type_node elem_tp = determine_type(comm_type.element_type, param_types, method_param_types, generic_param_types);
                     if (elem_tp != comm_type.element_type)
                     {
-                        return SystemLibrary.SystemLibrary.syn_visitor.convertion_data_and_alghoritms.type_constructor.create_unsized_array(elem_tp, null, 1, comm_type.loc);
+                        return SystemLibrary.SystemLibrary.syn_visitor.convertion_data_and_alghoritms.type_constructor.create_unsized_array(elem_tp, 1, comm_type.loc);
                     }
                     return tn;
                 }
@@ -589,6 +589,8 @@ namespace PascalABCCompiler.TreeRealization
 
         private static bool CheckIfTypeDependsOnUndeducedGenericParameters(type_node formalType, type_node[] deduced) //lroman
         {
+            if (formalType == null)
+                return false;
             if (formalType.generic_function_container != null)
             {
                 var par_num = formalType.generic_param_index;
@@ -1445,7 +1447,7 @@ namespace PascalABCCompiler.TreeRealization
             string rez;
             if (type_name)
             {
-                int last = name.LastIndexOf(compiler_string_consts.generic_params_infix);
+                int last = name.LastIndexOf(StringConstants.generic_params_infix);
                 if (last < 0)
                 {
                     rez = name;
@@ -1473,7 +1475,7 @@ namespace PascalABCCompiler.TreeRealization
         {
             if (tn.is_generic_parameter && tn.base_type != null && tn.base_type.IsAbstract && !(tn is common_type_node && (tn as common_type_node).has_default_constructor))
                 return false;
-            List<SymbolInfo> sil = tn.find_in_type(compiler_string_consts.default_constructor_name, tn.Scope);
+            List<SymbolInfo> sil = tn.find_in_type(StringConstants.default_constructor_name, tn.Scope);
             if (sil != null)
             {
                 foreach (SymbolInfo si in sil)
@@ -1824,6 +1826,13 @@ namespace PascalABCCompiler.TreeRealization
                 cmn.return_variable = (orig_fn as common_function_node)?.return_variable;
             }
             cmn.IsOperator = orig_fn.IsOperator;
+            if (orig_fn is compiled_function_node)
+            {
+                compiled_function_node fn_orig = orig_fn as compiled_function_node;
+                if (fn_orig.method_info.GetBaseDefinition() != null)
+                    cmn.overrided_method = compiled_function_node.get_compiled_method(fn_orig.method_info.GetBaseDefinition());
+            }
+            
             return cmn;
         }
 
@@ -1948,6 +1957,12 @@ namespace PascalABCCompiler.TreeRealization
         public definition_node ConvertMember(definition_node orig_node)
         {
             definition_node rez_node = _members[orig_node] as definition_node;
+            /*if ((rez_node != null) && this.BaseFullName == "PABCSystem.NewSet`1" && orig_node is compiled_function_node cfn2 
+                && cfn2.name == "op_Equality")
+            {
+                rez_node = null;
+                _members.Remove(orig_node); // ну так себе метод - сколько операций = столько и будет удаляться и повторно создаваться :)
+            }*/
             if (rez_node == null)
             {
                 //Преобразуем найденный член класса.
@@ -2218,9 +2233,13 @@ namespace PascalABCCompiler.TreeRealization
 
         public void conform_basic_functions()
         {
-            conform_basic_function(compiler_string_consts.assign_name, 0);
-            conform_basic_function(compiler_string_consts.eq_name, 1);
-            conform_basic_function(compiler_string_consts.noteq_name, 2);
+            // Вообще говоря, надо эти операции добавлять только если пользовательские не определены
+            if (BaseFullName != "PABCSystem.NewSet`1") // SSM 19/11/24 - для типа встроенных множеств где эти операции переопределены
+            {
+                conform_basic_function(StringConstants.assign_name, 0);
+                conform_basic_function(StringConstants.eq_name, 1);
+                conform_basic_function(StringConstants.noteq_name, 2);
+            }
             temp_names = null;
         }
 

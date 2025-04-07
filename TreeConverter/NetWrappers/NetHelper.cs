@@ -204,7 +204,7 @@ namespace PascalABCCompiler.NetHelper
                             }
                         }
                     }
-                    if (SemanticRules.AllowGlobalVisibilityForPABCDll && entry_type != null)
+                    if (SemanticRulesConstants.AllowGlobalVisibilityForPABCDll && entry_type != null)
                     {
                         t = NetHelper.FindType(entry_type.Namespace + "." + name);
                         if (t != null) sil = new List<SymbolInfo> { new SymbolInfo(compiled_type_node.get_type_node(t)) };
@@ -212,7 +212,7 @@ namespace PascalABCCompiler.NetHelper
                         {
                             object[] attrs = entry_type.GetCustomAttributes(false);
                             for (int j = 0; j < attrs.Length; j++)
-                                if (attrs[j].GetType().Name == PascalABCCompiler.TreeConverter.compiler_string_consts.global_attr_name)
+                                if (attrs[j].GetType().Name == StringConstants.global_attr_name)
                                 {
                                     sil = NetHelper.FindName(entry_type, name);
                                     if (sil != null) break;
@@ -559,7 +559,7 @@ namespace PascalABCCompiler.NetHelper
                                         if (members.TryGetValue(tmp, out mht))
                                         {
                                             List<MemberInfo> mis2 = null;
-                                            string name = compiler_string_consts.GetNETOperName(mi.Name);
+                                            string name = StringConstants.GetNETOperName(mi.Name);
                                             if (name == null)
                                                 name = mi.Name;
                                             if (!mht.TryGetValue(name, out mis2))
@@ -578,7 +578,7 @@ namespace PascalABCCompiler.NetHelper
                                                 if (members.TryGetValue(tt, out mht))
                                                 {
                                                     List<MemberInfo> mis2 = null;
-                                                    string name = compiler_string_consts.GetNETOperName(mi.Name);
+                                                    string name = StringConstants.GetNETOperName(mi.Name);
                                                     if (name == null)
                                                         name = mi.Name;
                                                     if (!mht.TryGetValue(name, out mis2))
@@ -597,7 +597,7 @@ namespace PascalABCCompiler.NetHelper
                                             if (members.TryGetValue(arr_t, out mht))
                                             {
                                                 List<MemberInfo> mis2 = null;
-                                                string name = compiler_string_consts.GetNETOperName(mi.Name);
+                                                string name = StringConstants.GetNETOperName(mi.Name);
                                                 if (name == null)
                                                     name = mi.Name;
                                                 if (!mht.TryGetValue(name, out mis2))
@@ -615,7 +615,7 @@ namespace PascalABCCompiler.NetHelper
                                             if (members.TryGetValue(gen_t, out mht))
                                             {
                                                 List<MemberInfo> mis2 = null;
-                                                string name = compiler_string_consts.GetNETOperName(mi.Name);
+                                                string name = StringConstants.GetNETOperName(mi.Name);
                                                 if (name == null)
                                                     name = mi.Name;
                                                 if (!mht.TryGetValue(name, out mis2))
@@ -637,7 +637,7 @@ namespace PascalABCCompiler.NetHelper
                         object[] attrs = t.GetCustomAttributes(false);
                         foreach (Attribute attr in attrs)
                         {
-                            if (attr.GetType().Name == PascalABCCompiler.TreeConverter.compiler_string_consts.global_attr_name)
+                            if (attr.GetType().Name == StringConstants.global_attr_name)
                             {
                                 entry_type = t;
                                 unit_types.Insert(0, t);
@@ -645,11 +645,11 @@ namespace PascalABCCompiler.NetHelper
 
                                 break;
                             }
-                            else if (attr.GetType().Name == PascalABCCompiler.TreeConverter.compiler_string_consts.class_unit_attr_name)
+                            else if (attr.GetType().Name == StringConstants.class_unit_attr_name)
                             {
-                                if (_assembly.ManifestModule.ScopeName == compiler_string_consts.pabc_rtl_dll_name)
+                                if (_assembly.ManifestModule.ScopeName == StringConstants.pabc_rtl_dll_name)
                                 {
-                                    if (t.Name == "PABCSystem")
+                                    if (t.Name == StringConstants.pascalSystemUnitName)
                                         PABCSystemType = t;
                                     else if (t.Name == "PT4")
                                         PT4Type = t;
@@ -665,14 +665,14 @@ namespace PascalABCCompiler.NetHelper
                         if (attrs.Length == 1)
                         {
                             Type attr_t = attrs[0].GetType();
-                            if (attr_t.FullName == compiler_string_consts.file_of_attr_name)
+                            if (attr_t.FullName == StringConstants.file_of_attr_name)
                             {
                                 object o = attr_t.GetField("Type", BindingFlags.Public | BindingFlags.Instance).GetValue(attrs[0]);
                                 if (o is Type)
                                     attr_t = o as Type;
                                 else
                                     attr_t = _assembly.GetType(o as string, false);
-                                if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.compiled_unit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
+                                if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.CompiledUnit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
                                 {
                                     type_node tn = CreatePascalType(attr_t);
                                     if (tn != null)
@@ -686,7 +686,7 @@ namespace PascalABCCompiler.NetHelper
                                     compiled_pascal_types[t.Namespace + "." + t.Name.Substring(1)] = t;
                                 }
                             }
-                            else if (attr_t.FullName == compiler_string_consts.set_of_attr_name)
+                            else if (attr_t.FullName == StringConstants.set_of_attr_name)
                             {
                                 object o = attr_t.GetField("Type", BindingFlags.Public | BindingFlags.Instance).GetValue(attrs[0]);
                                 if (o is Type)
@@ -696,7 +696,7 @@ namespace PascalABCCompiler.NetHelper
                                     attr_t = t.Assembly.GetType(o as string, false);
 
                                 }
-                                if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.compiled_unit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
+                                if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.CompiledUnit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
                                 {
                                     type_node tn = CreatePascalType(attr_t);
                                     if (tn != null)
@@ -710,10 +710,10 @@ namespace PascalABCCompiler.NetHelper
                                     compiled_pascal_types[t.Namespace + "." + t.Name.Substring(1)] = t;
                                 }
                             }
-                            else if (attr_t.FullName == compiler_string_consts.short_string_attr_name)
+                            else if (attr_t.FullName == StringConstants.short_string_attr_name)
                             {
                                 int len = (int)attr_t.GetField("Length", BindingFlags.Public | BindingFlags.Instance).GetValue(attrs[0]);
-                                if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.compiled_unit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
+                                if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.CompiledUnit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
                                 {
                                     type_node tn = PascalABCCompiler.TreeConverter.compilation_context.instance.create_short_string_type(len, null);
                                     compiled_pascal_types[t.Namespace + "." + t.Name.Substring(1)] = tn;
@@ -723,11 +723,11 @@ namespace PascalABCCompiler.NetHelper
                                     compiled_pascal_types[t.Namespace + "." + t.Name.Substring(1)] = t;
                                 }
                             }
-                            else if (attr_t.FullName == compiler_string_consts.template_class_attr_name)
+                            else if (attr_t.FullName == StringConstants.template_class_attr_name)
                             {
                                 compiled_pascal_types[t.Namespace + "." + t.Name.Substring(1)] = t;
                             }
-                            else if (attr_t.FullName == compiler_string_consts.type_synonim_attr_name)
+                            else if (attr_t.FullName == StringConstants.type_synonim_attr_name)
                             {
                                 object o = attr_t.GetField("Type", BindingFlags.Public | BindingFlags.Instance).GetValue(attrs[0]);
                                 if (o is Type)
@@ -775,7 +775,7 @@ namespace PascalABCCompiler.NetHelper
             if (attrs.Length == 1)
             {
                 Type attr_t = attrs[0].GetType();
-                if (attr_t.FullName == compiler_string_consts.file_of_attr_name)
+                if (attr_t.FullName == StringConstants.file_of_attr_name)
                 {
                     object o = attr_t.GetField("Type", BindingFlags.Public | BindingFlags.Instance).GetValue(attrs[0]);
                     if (o is Type)
@@ -792,7 +792,7 @@ namespace PascalABCCompiler.NetHelper
                     }
                     return PascalABCCompiler.TreeConverter.compilation_context.instance.create_typed_file_type(compiled_type_node.get_type_node(attr_t), null);
                 }
-                else if (attr_t.FullName == compiler_string_consts.set_of_attr_name)
+                else if (attr_t.FullName == StringConstants.set_of_attr_name)
                 {
                     object o = attr_t.GetField("Type", BindingFlags.Public | BindingFlags.Instance).GetValue(attrs[0]);
                     if (o is Type)
@@ -809,12 +809,12 @@ namespace PascalABCCompiler.NetHelper
                     }
                     return PascalABCCompiler.TreeConverter.compilation_context.instance.create_set_type(compiled_type_node.get_type_node(attr_t), null);
                 }
-                else if (attr_t.FullName == compiler_string_consts.short_string_attr_name)
+                else if (attr_t.FullName == StringConstants.short_string_attr_name)
                 {
                     int len = (int)attr_t.GetField("Length", BindingFlags.Public | BindingFlags.Instance).GetValue(attrs[0]);
                     return PascalABCCompiler.TreeConverter.compilation_context.instance.create_short_string_type(len, null);
                 }
-                else if (attr_t.FullName == compiler_string_consts.template_class_attr_name)
+                else if (attr_t.FullName == StringConstants.template_class_attr_name)
                 {
                     return null;
                     
@@ -846,8 +846,8 @@ namespace PascalABCCompiler.NetHelper
 		{
 			object[] attrs = t.GetCustomAttributes(false);
 			for (int j=0; j<attrs.Length; j++)
-			if (attrs[j].GetType().Name == PascalABCCompiler.TreeConverter.compiler_string_consts.global_attr_name
-                || attrs[j].GetType().Name == PascalABCCompiler.TreeConverter.compiler_string_consts.class_unit_attr_name)
+			if (attrs[j].GetType().Name == StringConstants.global_attr_name
+                || attrs[j].GetType().Name == StringConstants.class_unit_attr_name)
 			{
 				return true;
 			}
@@ -1042,9 +1042,9 @@ namespace PascalABCCompiler.NetHelper
         {
             get
             {
-                if(SemanticRules.PoinerRealization == PoinerRealization.IntPtr)
-                    return FindTypeOrCreate(compiler_string_consts.pointer_net_type_name_intptr);
-                return FindTypeOrCreate(compiler_string_consts.pointer_net_type_name_void);
+                if(SemanticRulesConstants.PoinerRealization == PoinerRealization.IntPtr)
+                    return FindTypeOrCreate(StringConstants.pointer_net_type_name_intptr);
+                return FindTypeOrCreate(StringConstants.pointer_net_type_name_void);
             }
         }
 
@@ -1115,20 +1115,71 @@ namespace PascalABCCompiler.NetHelper
             {
                 List<SymbolInfo> sil = scope.FindOnlyInType(op_name, scope);
                 if(sil != null)
+                    // что будет если два одинаковых преобразования? Может ли такое быть?
                     foreach(SymbolInfo si in sil)
                     {
                         if (si.sym_info is common_namespace_function_node)
                         {
                             function_node fn = si.sym_info as function_node;
-                            if ((fn.return_value_type == to || fn.return_value_type.original_generic == to 
-                                || to.type_special_kind == type_special_kind.array_kind && fn.return_value_type != null && fn.return_value_type.type_special_kind == type_special_kind.array_kind 
-                                && fn.return_value_type.element_type.is_generic_parameter) && 
-                                fn.parameters.Count == 1 && 
-                                (fn.parameters[0].type == from || fn.parameters[0].type.original_generic == from)
-                                || fn.parameters[0].type.type_special_kind == type_special_kind.array_kind && fn.parameters[0].type.element_type.is_generic_parameter)
+                            // SSM 17/07/24 Тут треш какой-то. fn - функция приведения типа. 
+                            if (
+                                // Тип возвращаемого значения fn совпадает с to
+                                (fn.return_value_type == to || fn.return_value_type.original_generic == to
+                                  // Тут странное условие. to - это массив, fn.return_value_type - это массив и 
+                                  // тип элемента этого массива - generic. То есть, это функция преобразования к array of T
+                                  // непонятно, можно ли тут двумерные массивы или просто system.array
+                                  || to.type_special_kind == type_special_kind.array_kind 
+                                     && fn.return_value_type != null 
+                                     && fn.return_value_type.type_special_kind == type_special_kind.array_kind 
+                                     && fn.return_value_type.element_type.is_generic_parameter
+                                ) 
+                                  // Ну тут более менее понятно. Параметр у преобразования - один - 
+                                  // и он в точности равен from
+                                  && fn.parameters.Count == 1 
+                                  && (fn.parameters[0].type == from || fn.parameters[0].type.original_generic == from)
+                                // А тут самый главный треш. Мы преобразуем из массива. Почему то не проверяется уже, что 
+                                // количество параметров = 1. Ну ладно. Наверное это всегда так
+                                // Но далее просто сказано, что это обобщенный массив.
+                                // То есть, мы преобразуем из обобщенного массива array of T КУДА УГОДНО
+                                // и вообще не сравниваем с to. В этом и ошибка!
+                                //|| fn.parameters[0].type.type_special_kind == type_special_kind.array_kind 
+                                //  && fn.parameters[0].type.element_type.is_generic_parameter
+                               )
                             {
                                 return fn;
                             }
+                            if (
+                                fn.parameters[0].type.type_special_kind == type_special_kind.array_kind
+                                  && fn.parameters[0].type.element_type.is_generic_parameter
+                                  && fn.parameters.Count == 1
+                                  // Вот это условие для set of T должно удовлетвориться и тогда всё будет работать!
+                                  && (fn.return_value_type == to || fn.return_value_type.original_generic == to)
+                               )
+                            {
+                                return fn;
+                            }
+                            // А теперь конкретно для преобразования array of T в set of T !!! Надо переделывать. Позже
+                            if (
+                                fn.parameters[0].type.type_special_kind == type_special_kind.array_kind
+                                  && fn.parameters[0].type.element_type.is_generic_parameter
+                                  && fn.parameters.Count == 1
+                                  && to is common_type_node ctn && ctn.type_special_kind == type_special_kind.set_type
+                                )
+                            {
+                                List<type_node> instance_params = new List<type_node>();
+                                
+                                instance_params.Add(ctn.element_type); // Это должен быть конкретный тип
+                                var fn1 = fn.get_instance(instance_params, false, null);
+                                if (
+                                    fn1.return_value_type == to || fn1.return_value_type.original_generic == to
+                                   )
+                                {
+                                    // Вернуть тем не менее fn! Во внешнем коде он тоже инстанцируется!
+                                    // Это обязательно надо переделывать!
+                                    return fn;
+                                }
+                            }
+
                         }
                     }
             }
@@ -1138,13 +1189,13 @@ namespace PascalABCCompiler.NetHelper
         public static function_node get_implicit_conversion(compiled_type_node in_type, compiled_type_node from,
             type_node to, NetTypeScope scope)
         {
-            return get_conversion(in_type, from, to, compiler_string_consts.implicit_operator_name, scope);
+            return get_conversion(in_type, from, to, StringConstants.implicit_operator_name, scope);
         }
 
         public static function_node get_explicit_conversion(compiled_type_node in_type, compiled_type_node from,
             compiled_type_node to, NetTypeScope scope)
         {
-            return get_conversion(in_type, from, to, compiler_string_consts.explicit_operator_name, scope);
+            return get_conversion(in_type, from, to, StringConstants.explicit_operator_name, scope);
         }
 
         public static compiled_type_node get_array_type(compiled_type_node element_type)
@@ -1272,7 +1323,7 @@ namespace PascalABCCompiler.NetHelper
                                 if (cur_used_assemblies.ContainsKey(mi.DeclaringType.Assembly))
                                 {
                                     List<MemberInfo> al = null;
-                                    string s = compiler_string_consts.GetNETOperName(mi.Name);
+                                    string s = StringConstants.GetNETOperName(mi.Name);
                                     if (s == null)
                                         s = mi.Name;
                                     if (!ht.TryGetValue(s, out al))
@@ -1451,8 +1502,8 @@ namespace PascalABCCompiler.NetHelper
         public static List<SymbolInfo> FindNameIncludeProtected(Type t, string name)
         {
         	if (name == null) return null;
-			if (name == compiler_string_consts.assign_name) return null;
-            string s = compiler_string_consts.GetNETOperName(name);
+			if (name == StringConstants.assign_name) return null;
+            string s = StringConstants.GetNETOperName(name);
 			if (s != null) 
 			{
 				if (IsStandType(t)) return null;
@@ -1516,8 +1567,8 @@ namespace PascalABCCompiler.NetHelper
         public static List<SymbolInfo> FindName(Type t, string name)
         {
             if (name == null) return null;
-            if (name == compiler_string_consts.assign_name) return null;
-            string s = compiler_string_consts.GetNETOperName(name);
+            if (name == StringConstants.assign_name && !t.IsValueType) return null;
+            string s = StringConstants.GetNETOperName(name);
             string tmp_name = name;
             if (s != null)
             {
@@ -1536,12 +1587,37 @@ namespace PascalABCCompiler.NetHelper
 
             //TODO: проанализировать и изменить алгоритмы, использующие поиск.
             //List<SymbolInfo> si_list = new List<SymbolInfo>();
+            if (tmp_name == "/" && mis.Count > 1)
+            {
+                List<MemberInfo> tmp_mis = new List<MemberInfo>();
+                bool has_fdiv_ext = false;
+                foreach (MemberInfo mi in mis)
+                {
+                    if (mi.Name == "/")
+                    {
+                        tmp_mis.Add(mi);
+                        has_fdiv_ext = true;
+                        break;
+                    }
+                }
+                
+                foreach (MemberInfo mi in mis)
+                {
+                    if (mi.Name != "/" && !(has_fdiv_ext && mi.Name == "div"))
+                    {
+                        tmp_mis.Add(mi);
+                    }
+                }
+                mis = tmp_mis;
+            }
             foreach (MemberInfo mi in mis)
             {
                 if (mi.DeclaringType != null && PABCSystemType != null && mi.DeclaringType.Assembly == PABCSystemType.Assembly && !UsePABCRtl)
                     continue;
                 if (is_visible(mi))
                 {
+                    //if (tmp_name == "/" && (mi.Name == "op_Division" || mi.Name == "div") && mi.DeclaringType.FullName == "System.Numerics.BigInteger")
+                    //    continue;
                     SymbolInfo temp = null;
                     switch (mi.MemberType)
                     {
@@ -1637,7 +1713,7 @@ namespace PascalABCCompiler.NetHelper
 			{
 				if (cpn.type is compiled_type_node)
 				return cpn;
-				if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.compiled_unit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
+				if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.CompiledUnit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
 				{
 					if (cpn.type.type_special_kind == type_special_kind.typed_file &&
 				    (!PascalABCCompiler.TreeConverter.compilation_context.instance.TypedFiles.ContainsKey(cpn.type.element_type) || PascalABCCompiler.TreeConverter.compilation_context.instance.TypedFiles[cpn.type.element_type] != cpn.type))
@@ -1661,13 +1737,13 @@ namespace PascalABCCompiler.NetHelper
 			}
 			cpn = new compiled_variable_definition(pi);
 			
-			if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.compiled_unit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
+			if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.CompiledUnit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
 			{
 				object[] attrs = pi.GetCustomAttributes(false);
 				for (int i=0; i<attrs.Length; i++)
 				{
 					Type t = attrs[i].GetType();
-					if (t.FullName == compiler_string_consts.file_of_attr_name)
+					if (t.FullName == StringConstants.file_of_attr_name)
 					{
 						object o = t.GetField("Type",BindingFlags.Public|BindingFlags.Instance).GetValue(attrs[i]);
 						type_node tn = null;
@@ -1683,7 +1759,7 @@ namespace PascalABCCompiler.NetHelper
                     	else
 						cpn.type = PascalABCCompiler.TreeConverter.compilation_context.instance.create_typed_file_type(compiled_type_node.get_type_node(t),null);
 					}
-					else if (t.FullName == compiler_string_consts.set_of_attr_name)
+					else if (t.FullName == StringConstants.set_of_attr_name)
 					{
 						object o = t.GetField("Type",BindingFlags.Public|BindingFlags.Instance).GetValue(attrs[i]);
 						type_node tn = null;
@@ -1699,7 +1775,7 @@ namespace PascalABCCompiler.NetHelper
                     	else
 						cpn.type = PascalABCCompiler.TreeConverter.compilation_context.instance.create_set_type(compiled_type_node.get_type_node(t),null);
 					}
-					else if (t.FullName == compiler_string_consts.short_string_attr_name)
+					else if (t.FullName == StringConstants.short_string_attr_name)
 					{
 						int len = (int)t.GetField("Length",BindingFlags.Public|BindingFlags.Instance).GetValue(attrs[i]);
 						cpn.type = PascalABCCompiler.TreeConverter.compilation_context.instance.create_short_string_type(len,null);
@@ -1901,7 +1977,7 @@ namespace PascalABCCompiler.NetHelper
             if (o != null)
             {
                 template_class tc = o as template_class;
-                if (tc == null && PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.compiled_unit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
+                if (tc == null && PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.CompiledUnit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
                 {
                     Type t = o as Type;
                     if (t != null)
@@ -1923,7 +1999,7 @@ namespace PascalABCCompiler.NetHelper
             if (o != null)
             {
                 type_node tn = o as type_node;
-                if (tn == null && PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.compiled_unit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
+                if (tn == null && PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.CompiledUnit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
                 {
                     Type t = o as Type;
                     if (t != null)
@@ -1939,7 +2015,7 @@ namespace PascalABCCompiler.NetHelper
                 }
                 else
                 {
-                    if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.compiled_unit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
+                    if (PascalABCCompiler.TreeConverter.compilation_context.instance != null && PascalABCCompiler.TreeConverter.compilation_context.instance.syntax_tree_visitor.CompiledUnit != null && PascalABCCompiler.TreeConverter.compilation_context.instance.converted_namespace != null)
                     {
                         if (tn.type_special_kind == type_special_kind.typed_file &&
                         (!PascalABCCompiler.TreeConverter.compilation_context.instance.TypedFiles.ContainsKey(tn.element_type) || PascalABCCompiler.TreeConverter.compilation_context.instance.TypedFiles[tn.element_type] != tn))
@@ -2247,7 +2323,7 @@ namespace PascalABCCompiler.NetHelper
             if (t == null || !t.IsGenericTypeDefinition)
                 return;
             int n;
-            string s = compiler_string_consts.GetGenericTypeInformation(t.Name, out n).ToLower();
+            string s = StringConstants.GetGenericTypeInformation(t.Name, out n).ToLower();
             if (n == 0)
             {
                 return;

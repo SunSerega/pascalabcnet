@@ -1,4 +1,4 @@
-﻿using System;
+﻿/*using System;
 using System.IO;
 using System.Text;
 using PascalABCCompiler.ParserTools;
@@ -24,7 +24,7 @@ namespace PascalABCCompiler.VBNETParser
 				if (td.Type == ICSharpCode.NRefactory.Ast.ClassType.Module)
 				{
 					mod = new unit_module();
-					mod.Language = LanguageId.VBNET;
+					//mod.Language = "..."; // нужно заполнять !!!
 					mod.file_name = FileName;
 					mod.unit_name = new unit_name();
 					mod.unit_name.idunit_name = new ident(td.Name);
@@ -267,12 +267,12 @@ namespace PascalABCCompiler.VBNETParser
 				cmem.members.Add(get_method_header(meth));
 			}
 			return cmem;
-			/*else if (node is ICSharpCode.NRefactory.Ast.EventDeclaration)
+			*//*else if (node is ICSharpCode.NRefactory.Ast.EventDeclaration)
 			{
 				ICSharpCode.NRefactory.Ast.EventDeclaration meth = node as ICSharpCode.NRefactory.Ast.EventDeclaration;
 				cmem.access_mod = get_access_modifier(meth.Modifier);
 				cmem.members.Add(get_event_declaration(meth));
-			}*/
+			}*//*
 		}
 		
 		private constructor get_constructor_header(ICSharpCode.NRefactory.Ast.ConstructorDeclaration method)
@@ -493,10 +493,10 @@ namespace PascalABCCompiler.VBNETParser
 				return convert_unary_expression(expr as ICSharpCode.NRefactory.Ast.UnaryOperatorExpression);
 			if (expr is ICSharpCode.NRefactory.Ast.InvocationExpression)
 				return convert_invocation_expression(expr as ICSharpCode.NRefactory.Ast.InvocationExpression);
-			/*if (expr is ICSharpCode.NRefactory.Ast.FieldReferenceExpression)
+			*//*if (expr is ICSharpCode.NRefactory.Ast.FieldReferenceExpression)
 				return convert_field_reference_expression(expr as ICSharpCode.NRefactory.Ast.FieldReferenceExpression);
 			if (expr is ICSharpCode.NRefactory.Ast.NullExpression)
-				return new nil_const();*/
+				return new nil_const();*//*
 			if (expr is ICSharpCode.NRefactory.Ast.PrimitiveExpression)
 				return convert_primitive_expression(expr as ICSharpCode.NRefactory.Ast.PrimitiveExpression);
 			if (expr is ICSharpCode.NRefactory.Ast.TypeReferenceExpression)
@@ -565,13 +565,13 @@ namespace PascalABCCompiler.VBNETParser
 			return new ident(expr.Identifier);
 		}
 		
-		/*private expression convert_field_reference_expression(ICSharpCode.NRefactory.Ast.FieldReferenceExpression expr)
+		*//*private expression convert_field_reference_expression(ICSharpCode.NRefactory.Ast.FieldReferenceExpression expr)
 		{			
 			expression obj = convert_expression(expr.TargetObject);
 			if (!string.IsNullOrEmpty(expr.FieldName))
 			return new dot_node(obj as addressed_value,new ident(expr.FieldName));
 			else return obj;
-		}*/
+		}*//*
 		
 		private expression convert_invocation_expression(ICSharpCode.NRefactory.Ast.InvocationExpression expr)
 		{
@@ -638,3 +638,4 @@ namespace PascalABCCompiler.VBNETParser
 	}
 }
 
+*/
