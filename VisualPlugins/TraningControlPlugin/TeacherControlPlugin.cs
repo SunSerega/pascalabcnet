@@ -59,7 +59,7 @@ namespace VisualPascalABCPlugins
             // Регистрация обработчика
             this.Workbench.ServiceContainer.RunService.Starting += RunStartingHandler;
             this.Workbench.ServiceContainer.RunService.ChangeArgsBeforeRun += ChangeArgsBeforeRunHandler;
-            VisualEnvironmentCompiler.Compiler.SourceFilesProvider = TeacherSourceFilesProvider;
+            //VisualEnvironmentCompiler.Compiler.SourceFilesProvider = TeacherSourceFilesProvider;
             //Workbench.ServiceContainer.BuildService.BeforeCompile += BeforeCompileHandler;
         }
 
