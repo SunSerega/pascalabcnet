@@ -60,12 +60,8 @@ namespace CodeCompletion
         {
             pabcNamespaces.Clear();
         }
-
-		private static string get_doctagsParserExtension(string ext)
-		{
-			return ext + "dt";
-		}
 		
+        // нужно переделать на использование ILanguage  EVA
 		public static IParser CurrentParser
 		{
 			get
@@ -124,6 +120,8 @@ namespace CodeCompletion
                 File.AppendAllText("log.txt", e.Message + Environment.NewLine + e.StackTrace + Environment.NewLine);
 #endif
             }
+            
+            TypeScope.instance_cache.Clear();
 
             // очистка кэша и данных от старых компиляций, чтобы при новой компиляции не появились ссылки на старые данные
             TypeTable.Clear();
@@ -376,18 +374,18 @@ namespace CodeCompletion
             return false;
         }
 
-        public string[] GetKeywords()
+        public List<string> GetKeywords()
         {
             if (CodeCompletionController.CurrentParser != null)
-            	return CodeCompletionController.CurrentParser.LanguageInformation.Keywords;
-            return new string[0];
+            	return CodeCompletionController.CurrentParser.LanguageInformation.KeywordsStorage.Keywords;
+            return new List<string>();
         }
 
-        public string[] GetTypeKeywords()
+        public List<string> GetTypeKeywords()
         {
             if (CodeCompletionController.CurrentParser != null)
-            	return CodeCompletionController.CurrentParser.LanguageInformation.TypeKeywords;
-            return new string[0];
+            	return CodeCompletionController.CurrentParser.LanguageInformation.KeywordsStorage.TypeKeywords;
+            return new List<string>();
         }
 
         const string LibSourceDirectoryIdent = "%LIBSOURCEDIRECTORY%";
