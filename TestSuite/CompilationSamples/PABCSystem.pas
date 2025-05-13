@@ -11195,6 +11195,124 @@ begin
   Result := Self.OrderByDescending(x -> x, System.StringComparer.Ordinal);
 end;
 
+/// Проверяет, отсортирована ли последовательность по возрастанию ключа, используя компаратор
+function IsOrderedBy<T, TKey>(self: sequence of T; keySelector: T -> TKey; 
+  comparer: IComparer<TKey>): boolean; extensionmethod;
+begin
+  var prevKey: TKey;
+  var first := True;
+  foreach var item in self do
+  begin
+    var currentKey := keySelector(item);
+    if not first and (comparer.Compare(prevKey, currentKey) > 0) then
+      exit(False);
+    prevKey := currentKey;
+    first := False;
+  end;
+  Result := True;
+end;
+
+/// Проверяет, отсортирована ли последовательность по возрастанию ключа
+function IsOrderedBy<T, TKey>(self: sequence of T; keySelector: T -> TKey): boolean;
+  extensionmethod; where TKey: System.IComparable<TKey>;
+begin  
+  Result := self.IsOrderedBy(keySelector, Comparer&<TKey>.Default);
+end;
+
+/// Проверяет, отсортирована ли последовательность по возрастанию в порядке, заданном компаратором comparer
+function IsOrdered<T>(self: sequence of T; comparer: IComparer<T>): boolean; extensionmethod;
+begin
+  var prev: T;
+  var first := True;
+  foreach var current in self do
+  begin
+    if not first and (comparer.Compare(prev, current) > 0) then
+      exit(False);
+    prev := current;
+    first := False;
+  end;
+  Result := True;
+end;
+
+/// Проверяет, отсортирована ли последовательность по возрастанию 
+function IsOrdered<T>(self: sequence of T): boolean; extensionmethod; where T: System.IComparable<T>;
+begin
+  var prev: T;
+  var first := True;
+  foreach var current in self do
+  begin
+    if not first and (prev.CompareTo(current) > 0) then
+      exit(False);
+    prev := current;
+    first := False;
+  end;
+  Result := True;
+end;
+
+/// Проверяет, отсортирована ли последовательность по убыванию ключа, используя компаратор
+function IsOrderedByDescending<T, TKey>(self: sequence of T; keySelector: T -> TKey; 
+  comparer: IComparer<TKey>): boolean; extensionmethod;
+begin
+  var prevKey: TKey;
+  var first := True;
+  foreach var item in self do
+  begin
+    var currentKey := keySelector(item);
+    if not first and (comparer.Compare(prevKey, currentKey) < 0) then 
+      exit(False);
+    prevKey := currentKey;
+    first := False;
+  end;
+  Result := True;
+end;
+
+/// Проверяет, отсортирована ли последовательность по убыванию ключа
+function IsOrderedByDescending<T, TKey>(self: sequence of T; keySelector: T -> TKey): boolean; 
+  extensionmethod; where TKey: System.IComparable<TKey>;
+begin
+  var prevKey: TKey;
+  var first := True;
+  foreach var item in self do
+  begin
+    var currentKey := keySelector(item);
+    if not first and (prevKey.CompareTo(currentKey) < 0) then
+      exit(False);
+    prevKey := currentKey;
+    first := False;
+  end;
+  Result := True;
+end;
+
+/// Проверяет, отсортирована ли последовательность по убыванию 
+function IsOrderedDescending<T>(self: sequence of T): boolean; extensionmethod; where T: System.IComparable<T>;
+begin
+  var prev: T;
+  var first := True;
+  foreach var current in self do
+  begin
+    if not first and (prev.CompareTo(current) < 0) then
+      exit(False);
+    prev := current;
+    first := False;
+  end;
+  Result := True;
+end;
+
+/// Проверяет, отсортирована ли последовательность по убыванию в порядке, заданном компаратором comparer
+function IsOrderedDescending<T>(self: sequence of T; comparer: IComparer<T>): boolean; extensionmethod;
+begin
+  var prev: T;
+  var first := True;
+  foreach var current in self do
+  begin
+    if not first and (comparer.Compare(prev, current) < 0) then // Обратный знак
+      exit(False);
+    prev := current;
+    first := False;
+  end;
+  Result := True;
+end;
+
 /// Возвращает множество HashSet по данной последовательности
 function ToHashSet<T>(Self: sequence of T): HashSet<T>; extensionmethod;
 begin
@@ -13342,12 +13460,88 @@ begin
   System.Array.Copy(a,Self,a.Length);
 end;
 
-
 /// Возвращает индекс последнего элемента массива
 function High(Self: System.Array); extensionmethod := High(Self);
 
 /// Возвращает индекс первого элемента массива
 function Low(Self: System.Array); extensionmethod := Low(Self);
+
+/// Проверяет, отсортирован ли массив по возрастанию ключа
+function IsOrderedBy<T, TKey>(self: array of T; keySelector: T -> TKey): boolean; 
+  extensionmethod; where TKey: System.IComparable<TKey>;
+begin
+  for var i := 0 to self.High - 1 do
+    if keySelector(self[i]).CompareTo(keySelector(self[i + 1])) > 0 then
+      exit(False);
+  Result := True;
+end;
+
+/// Проверяет, отсортирован ли массив по возрастанию ключа с компаратором
+function IsOrderedBy<T, TKey>(self: array of T; keySelector: T -> TKey; 
+  comparer: IComparer<TKey>): boolean; extensionmethod;
+begin
+  for var i := 0 to self.High - 1 do
+    if comparer.Compare(keySelector(self[i]), keySelector(self[i + 1])) > 0 then
+      exit(False);
+  Result := True;
+end;
+
+/// Проверяет, отсортирован ли массив по убыванию ключа
+function IsOrderedByDescending<T, TKey>(self: array of T; keySelector: T -> TKey): boolean; 
+  extensionmethod; where TKey: System.IComparable<TKey>;
+begin
+  for var i := 0 to self.High - 1 do
+    if keySelector(self[i]).CompareTo(keySelector(self[i + 1])) < 0 then // Обратный знак
+      exit(False);
+  Result := True;
+end;
+
+/// Проверяет, отсортирован ли массив по убыванию ключа с компаратором
+function IsOrderedByDescending<T, TKey>(self: array of T; keySelector: T -> TKey; 
+  comparer: IComparer<TKey>): boolean; extensionmethod;
+begin
+  for var i := 0 to self.High - 1 do
+    if comparer.Compare(keySelector(self[i]), keySelector(self[i + 1])) < 0 then // Обратный знак
+      exit(False);
+  Result := True;
+end;
+
+/// Проверяет, отсортирован ли массив по возрастанию 
+function IsOrdered<T>(self: array of T): boolean; extensionmethod; where T: System.IComparable<T>;
+begin
+  for var i := 0 to self.High - 1 do
+    if self[i].CompareTo(self[i + 1]) > 0 then
+      exit(False);
+  Result := True;
+end;
+
+/// Проверяет, отсортирован ли массив в порядке, заданном компаратором comparer
+function IsOrdered<T>(self: array of T; comparer: IComparer<T>): boolean; extensionmethod;
+begin
+  for var i := 0 to self.High - 1 do
+    if comparer.Compare(self[i], self[i + 1]) > 0 then
+      exit(False);
+  Result := True;
+end;
+
+/// Проверяет, отсортирован ли массив по убыванию 
+function IsOrderedDescending<T>(self: array of T): boolean; extensionmethod; where T: System.IComparable<T>;
+begin
+  for var i := 0 to self.High - 1 do
+    if self[i].CompareTo(self[i + 1]) < 0 then
+      exit(False);
+  Result := True;
+end;
+
+/// Проверяет, отсортирован ли массив по убыванию в порядке, заданном компаратором comparer
+function IsOrderedDescending<T>(self: array of T; comparer: IComparer<T>): boolean; extensionmethod;
+begin
+  for var i := 0 to self.High - 1 do
+    if comparer.Compare(self[i], self[i + 1]) < 0 then // Обратный знак
+      exit(False);
+  Result := True;
+end;
+
 
 /// Возвращает последовательность индексов одномерного массива
 function Indices<T>(Self: array of T): sequence of integer; extensionmethod := Range(0, Self.Length - 1);
