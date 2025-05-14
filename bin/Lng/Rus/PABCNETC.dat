@@ -10,6 +10,7 @@ TOTAL{0}_SUCCESS{1}_PROCENT{2}=Всего файлов {0}, откомпилир
 COMPILING_ASSEMBLY{0}=Компилирую сборку {0}...
 RESTARTING_COMPILER=Загружаю ядро...
 ERROR_PARSERS_NOT_FOUND=Предупреждение: ни один парсер не подключен!
+ERROR_LOADING_LANGUAGE_{0}_{1}=Ошибка загрузки парсера для языка {0}: {1}
 CONNECTED_PARSER{0}=Подключен парсер {0}
 CONNECTED_PARSERS=Подключены парсеры: 
 CONNECTED_CONVERSIONS=Подключены преобразования: 

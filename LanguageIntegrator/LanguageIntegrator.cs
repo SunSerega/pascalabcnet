@@ -30,7 +30,7 @@ namespace Languages.Integration
         /// <summary>
         /// Событие, информирующее об ошибке загрузки плагина языка
         /// </summary>
-        public static event Action<string> LanguageLoadErrorOccured;
+        public static event Action<string, Exception> LanguageLoadErrorOccured;
 
         /// <summary>
         /// Возвращает директорию, содержащую комплекты языков (если ее нет, то вернется null)
@@ -123,7 +123,7 @@ namespace Languages.Integration
                 errorMessage += string.Join(Environment.NewLine, e.LoaderExceptions.Select(error => error.ToString())) + Environment.NewLine;
                 File.AppendAllText("log.txt", errorMessage);
 #endif
-                LanguageLoadErrorOccured?.Invoke(languageFile.Name);
+                LanguageLoadErrorOccured?.Invoke(languageFile.Name, e);
             }
             catch (Exception e)
             {
@@ -131,7 +131,7 @@ namespace Languages.Integration
                 string errorMessage = e + Environment.NewLine;
                 File.AppendAllText("log.txt", errorMessage);
 #endif
-                LanguageLoadErrorOccured?.Invoke(languageFile.Name);
+                LanguageLoadErrorOccured?.Invoke(languageFile.Name, e);
             }
         }
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
+using Languages.Integration;
 
 namespace PascalABCCompiler
 {
@@ -267,7 +268,7 @@ namespace PascalABCCompiler
                 Reset();
             StartTime = DateTime.Now;
             Console.ForegroundColor = ConsoleColor.White;
-            string msg = string.Format(StringResourcesGet("COMPILING_ASSEMBLY{0}"), System.IO.Path.GetFileName(FileName));
+            string msg = string.Format(StringResourcesGet("COMPILING_ASSEMBLY{0}"), Path.GetFileName(FileName));
             if (short_output)
             {
                 ClearLine();
@@ -338,7 +339,7 @@ namespace PascalABCCompiler
                 Console.ForegroundColor = ConsoleColor.Gray;
                 if (FileName != null)
                 {
-                    FileName = string.Format("[{0}]{1} {2}...", Math.Round((DateTime.Now - StartTime).TotalMilliseconds), State, System.IO.Path.GetFileName(FileName));
+                    FileName = string.Format("[{0}]{1} {2}...", Math.Round((DateTime.Now - StartTime).TotalMilliseconds), State, Path.GetFileName(FileName));
                     StartTime = DateTime.Now;
                     Console.WriteLine(FileName);
                     //Console.Title = file_name;
@@ -414,7 +415,7 @@ namespace PascalABCCompiler
                 NoConsole = true;
             }
 
-            PascalABCCompiler.StringResourcesLanguage.LoadDefaultConfig();
+            StringResourcesLanguage.LoadDefaultConfig();
 
             if (args.Count == 1 && args[0] == "commandmode")
             {
@@ -439,8 +440,12 @@ namespace PascalABCCompiler
             
             Console.Title = StringResourcesGet("STARTING");
 
+            LanguageIntegrator.LanguageLoadErrorOccured += (langName, e) =>
+            {
+                Console.WriteLine(string.Format(StringResourcesGet("ERROR_LOADING_LANGUAGE_{0}_{1}"), langName, e));
+            };
             // загрузка всех парсеров и других составляющих языков  EVA
-            Languages.Integration.LanguageIntegrator.LoadAllLanguages();
+            LanguageIntegrator.LoadAllLanguages();
             
             Reset();
             Console.Title = Compiler.Banner;

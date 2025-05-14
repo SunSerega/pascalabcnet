@@ -5,6 +5,7 @@ using PascalABCCompiler.Errors;
 using System.IO;
 using System.Linq;
 using System.Globalization;
+using Languages.Integration;
 
 namespace PascalABCCompiler
 {
@@ -150,10 +151,14 @@ namespace PascalABCCompiler
             // 2022 г. К сожалению, директива с / конкурирует с именами каталогов в Linux. Надо писать новый консольный компилятор
 
             DateTime ldt = DateTime.Now;
-            PascalABCCompiler.StringResourcesLanguage.LoadDefaultConfig();
+            StringResourcesLanguage.LoadDefaultConfig();
 
+            LanguageIntegrator.LanguageLoadErrorOccured += (langName, e) =>
+            {
+                Console.WriteLine(string.Format(StringResourcesGet("ERROR_LOADING_LANGUAGE_{0}_{1}"), langName, e));
+            };
             // загрузка всех парсеров и других составляющих языков  EVA
-            Languages.Integration.LanguageIntegrator.LoadAllLanguages();
+            LanguageIntegrator.LoadAllLanguages();
 
             Compiler = new PascalABCCompiler.Compiler(null, null);
             Compiler.InternalDebug.SkipPCUErrors = false;
@@ -202,7 +207,7 @@ namespace PascalABCCompiler
                         OutputHelp();
                         return 0;
                     case "version":
-                        Console.WriteLine(PascalABCCompiler.Compiler.Version);
+                        Console.WriteLine(Compiler.Version);
                         return 0;
 
                     default:
