@@ -340,7 +340,7 @@ namespace VisualPascalABC
         /// <summary>
         /// Выводит сообщения об ошибках, возникших при загрузке языков
         /// </summary>
-        private void OnLanguageLoadErrorOccured(string languageFileName)
+        private void OnLanguageLoadErrorOccured(string languageFileName, Exception e)
         {
             string languageLoadErrorMessage = string.Format(VECStringResources.Get("LANGUAGE_LOAD_ERROR{0}"), Path.GetFileName(languageFileName));
             languageLoadErrorMessage += Environment.NewLine;
