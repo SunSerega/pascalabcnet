@@ -11948,7 +11948,55 @@ begin
     yield c.TakeGroup().ToArray;
 end;
 
-// ToDo Сделать AdjacentGroup с функцией сравнения
+type
+  AdjacentGroupByResult<TKey, TResult> = sealed auto class(System.Linq.IGrouping<TKey, TResult>)
+    public auto property Key: TKey;
+    public auto property Elements: sequence of TResult;
+    
+    public function GetEnumerator: IEnumerator<TResult> := Elements.GetEnumerator;
+    public function System.Collections.IEnumerable.GetEnumerator: System.Collections.IEnumerator := GetEnumerator;
+    
+  end;
+  
+/// Группирует подряд идущие элементы с одинаковыми значениями ключами
+/// Использует компаратор comp
+function AdjacentGroupBy<T,TKey>(self: sequence of T; by: T->TKey; comp: IEqualityComparer<TKey>): sequence of System.Linq.IGrouping<TKey, T>; extensionmethod;
+begin
+  var enmr := self.GetEnumerator;
+  if not enmr.MoveNext then exit;
+  if comp=nil then comp := System.Collections.Generic.EqualityComparer&<TKey>.Default;
+  
+  var l := new List<T>;
+  var key: TKey;
+  begin
+    var o := enmr.Current;
+    l += o;
+    key := by(o);
+  end;
+  var key_hc := comp.GetHashCode(key);
+  
+  while enmr.MoveNext do
+  begin
+    var o := enmr.Current;
+    var n_key := by(o);
+    var n_key_hc := comp.GetHashCode(n_key);
+    
+    if (n_key_hc<>key_hc) or not comp.Equals(n_key, key) then
+    begin
+      yield new AdjacentGroupByResult<TKey,T>(key, l.ToArray);
+      l.Clear;
+      key := n_key;
+      key_hc := n_key_hc;
+    end;
+    
+    l += o;
+  end;
+  
+  yield new AdjacentGroupByResult<TKey,T>(key, l.ToArray);
+end;
+/// Группирует подряд идущие элементы с одинаковыми значениями ключами
+/// Использует компаратор по-умолчанию
+function AdjacentGroupBy<T,TKey>(self: sequence of T; by: T->TKey); extensionmethod := self.AdjacentGroupBy(by, nil);
 
 /// Возвращает количество элементов, равных указанному значению
 function CountOf<T>(Self: sequence of T; x: T): integer; extensionmethod;
@@ -14279,17 +14327,23 @@ begin
   Result := Range(0, Self - 1);
 end;
 
-/// Возвращает число, ограниченное диапазоном от min до max включительно
-function Clamp(Self: integer; min,max: integer): integer; extensionmethod;
+/// Возвращает число, ограниченное диапазоном от bottom до top включительно
+function Clamp(Self: integer; bottom,top: integer): integer; extensionmethod;
 begin
-  if min > max then
+  if bottom > top then
     raise new System.ArgumentException(GetTranslation(MIN_CANNOT_BE_GREATER_THAN_MAX));
-  if Self < min then 
-    Result := min
-  else if Self > max then 
-    Result := max
+  if Self < bottom then 
+    Result := bottom
+  else if Self > top then 
+    Result := top
   else Result := Self;  
 end;
+
+/// Возвращает число, ограниченное величиной top сверху
+function ClampTop(Self: integer; top: integer): integer; extensionmethod := Min(Self, top);
+
+/// Возвращает число, ограниченное величиной bottom снизу
+function ClampBottom(Self: integer; bottom: integer): integer; extensionmethod := Max(Self, bottom);
 
 // -----------------------------------------------------
 //>>     Методы расширения типа BigInteger # Extension methods for BigInteger
@@ -14382,17 +14436,24 @@ begin
   Result := Format('{0:f' + frac + '}', Self)
 end;
 
-/// Возвращает число, ограниченное диапазоном от min до max включительно
-function Clamp(Self: real; min,max: real): real; extensionmethod;
+/// Возвращает число, ограниченное диапазоном от bottom до top включительно
+function Clamp(Self: real; bottom,top: real): real; extensionmethod;
 begin
-  if min > max then
+  if bottom > top then
     raise new System.ArgumentException(GetTranslation(MIN_CANNOT_BE_GREATER_THAN_MAX));
-  if Self < min then 
-    Result := min
-  else if Self > max then 
-    Result := max
+  if Self < bottom then 
+    Result := bottom
+  else if Self > top then 
+    Result := top
   else Result := Self;  
 end;
+
+/// Возвращает число, ограниченное величиной top сверху
+function ClampTop(Self: real; top: real): real; extensionmethod := Min(Self, top);
+
+/// Возвращает число, ограниченное величиной bottom снизу
+function ClampBottom(Self: real; bottom: real): real; extensionmethod := Max(Self, bottom);
+
 
 //------------------------------------------------------------------------------
 //>>     Методы расширения типа char # Extension methods for char
