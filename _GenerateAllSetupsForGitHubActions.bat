@@ -7,10 +7,6 @@ GetSamples.exe _svn\BF BF
 GetSamples.exe _svn\PL0\ PL0\
 cd ..\..
 
-cd utils\DefaultLanguageResMaker\
-LanguageResMaker.exe
-cd ..\..
-
 Utils\IncrementVresion\IncrementVresion.exe Configuration\Version.defs REVISION 1
 Utils\ReplaceInFiles\ReplaceInFiles.exe Configuration\Version.defs Configuration\GlobalAssemblyInfo.cs.tmpl Configuration\GlobalAssemblyInfo.cs
 Utils\ReplaceInFiles\ReplaceInFiles.exe Configuration\Version.defs ReleaseGenerators\PascalABCNET_version.nsh.tmpl ReleaseGenerators\PascalABCNET_version.nsh
@@ -21,8 +17,13 @@ dotnet build -c Release --no-incremental PascalABCNET.sln
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
 
 cd ReleaseGenerators
+echo "1"
 ..\bin\pabcnetc RebuildStandartModules.pas /rebuild /noconsole
+echo "2"
+..\bin\pabcnetc RebuildStandartModulesSPython.pas /noconsole
+echo "3"
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+echo "4"
 
 cd PABCRtl
 ..\..\bin\pabcnetc PABCRtl.pas /rebuild /noconsole
@@ -36,24 +37,34 @@ cd ..
 ExecHide.exe gacutil.exe /u PABCRtl
 ExecHide.exe gacutil.exe /i ..\bin\Lib\PABCRtl.dll
 
+echo "5"
 ..\bin\pabcnetc RebuildStandartModules.pas /rebuild /noconsole
+echo "6"
+..\bin\pabcnetc RebuildStandartModulesSPython.pas /noconsole
+echo "7"
 @IF %ERRORLEVEL% NEQ 0 GOTO ERROR
+echo "8"
 
 
-cd ..\bin
-TestRunner.exe 1
-TestRunner.exe 2
-TestRunner.exe 3
-TestRunner.exe 4
-TestRunner.exe 5
-TestRunner.exe 6
+cd ..\TestSuite
+..\bin\TestRunner.exe 1
+..\bin\TestRunner.exe 2
+..\bin\TestRunner.exe 3
+..\bin\TestRunner.exe 4
+..\bin\TestRunner.exe 5
+..\bin\TestRunner.exe 6
 
-cd ..\ReleaseGenerators
+cd ..\TestSuiteAdditionalLanguages\SPythonTests
+..\..\bin\TestRunner.exe 1
+..\..\bin\TestRunner.exe 2
+..\..\bin\TestRunner.exe 3
+..\..\bin\TestRunner.exe 4
+..\..\bin\TestRunner.exe 5
+..\..\bin\TestRunner.exe 6
+
+
+cd ..\..\ReleaseGenerators
 call PascalABCNET_ALL.bat
-
-cd ..
-
-dotnet build -c Release --no-incremental PascalABCNET.sln
 
 GOTO EXIT
 
