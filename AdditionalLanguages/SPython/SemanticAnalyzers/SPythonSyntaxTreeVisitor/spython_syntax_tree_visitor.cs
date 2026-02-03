@@ -1,12 +1,14 @@
-﻿using System.Collections.Generic;
+using PascalABCCompiler;
+using PascalABCCompiler.Errors;
 using PascalABCCompiler.SemanticTree;
 using PascalABCCompiler.SyntaxTree;
 using PascalABCCompiler.SystemLibrary;
 using PascalABCCompiler.TreeConverter;
 using PascalABCCompiler.TreeRealization;
-using PascalABCCompiler.Errors;
-using System.ComponentModel.Design;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using static PascalABCCompiler.StringConstants;
 
 namespace SPythonSyntaxTreeVisitor
 {
@@ -25,6 +27,52 @@ namespace SPythonSyntaxTreeVisitor
             contextChanger = mainSyntaxTreeVisitor.contextChanger;
 
             OnLeave = RunAdditionalChecks;
+        }
+
+        type_intersection_node boolToIntIntersectionPrev;
+
+        type_intersection_node intToBoolIntersectionPrev;
+
+        public override void BeforeCompilationActions()
+        {
+            base.BeforeCompilationActions();
+
+            UpdateStandardTypes();
+        }
+
+        public override void PostCompilationActions()
+        {
+            base.PostCompilationActions();
+
+            RestoreStandardTypes();
+        }
+
+        private void UpdateStandardTypes()
+        {
+            // Неявное преобразование из int в bool и из bool в int
+
+            boolToIntIntersectionPrev = SystemLibrary.bool_type.remove_intersection_node(SystemLibrary.integer_type);
+
+            intToBoolIntersectionPrev = SystemLibrary.integer_type.remove_intersection_node(SystemLibrary.bool_type);
+
+            var newIntersection = new type_intersection_node(type_compare.less_type);
+
+            newIntersection.this_to_another = new type_conversion(new basic_function_node(basic_function_type.booltoi, SystemLibrary.integer_type, false), false);
+
+            newIntersection.another_to_this = new type_conversion(new basic_function_node(basic_function_type.itobool, SystemLibrary.bool_type, false), false);
+
+            SystemLibrary.bool_type.add_intersection_node(SystemLibrary.integer_type, newIntersection, false);
+        }
+
+        private void RestoreStandardTypes()
+        {
+            SystemLibrary.bool_type.remove_intersection_node(SystemLibrary.integer_type);
+
+            if (boolToIntIntersectionPrev != null)
+                SystemLibrary.bool_type.add_intersection_node(SystemLibrary.integer_type, boolToIntIntersectionPrev, false);
+
+            if (intToBoolIntersectionPrev != null)
+                SystemLibrary.integer_type.add_intersection_node(SystemLibrary.bool_type, intToBoolIntersectionPrev, false);
         }
 
         private void RunAdditionalChecks(syntax_tree_node node)
@@ -196,7 +244,7 @@ namespace SPythonSyntaxTreeVisitor
                     }
                     break;*/
                 case Operators.Division:
-                    if (left.type == right.type && left.type.name == "string")
+                    if (left.type == right.type && left.type.name == string_type_name)
                     {
                         var mcn = new method_call(new dot_node(new semantic_addr_value(left, left.location), new ident("IndexOf")),
                             new expression_list(new semantic_addr_value(right, right.location)), _bin_expr.source_context);
@@ -205,26 +253,37 @@ namespace SPythonSyntaxTreeVisitor
                     }
                     break;
                 case Operators.IntegerDivision:
-                    if (left.type == right.type && left.type.name == "real")
+
+                    var possibleTypes = new string[] { integer_type_name, real_type_name, biginteger_type_name };
+
+                    var possibleCombinations = possibleTypes.SelectMany(t => possibleTypes, (t1, t2) => Tuple.Create(t1, t2))
+                                 .Where(tt => !tt.Equals(Tuple.Create(real_type_name, biginteger_type_name))
+                                              && !tt.Equals(Tuple.Create(biginteger_type_name, real_type_name)));
+
+                    if (possibleCombinations.Contains(Tuple.Create(left.type.name, right.type.name)))
                     {
                         var exprlist = new expression_list(); exprlist.source_context = _bin_expr.source_context;
                         exprlist.Add(new semantic_addr_value(left, left.location));
                         exprlist.Add(new semantic_addr_value(right, right.location));
-                        var floornode = new method_call(new ident("!FloorDiv"), exprlist, _bin_expr.source_context);
+                        var floornode = new method_call(new ident("!Div"), exprlist, _bin_expr.source_context);
                         visit(floornode);
                         return;
                     }
                     break;
                 case Operators.ModulusRemainder:
-                    if (left.type == right.type && left.type.name == "real")
+
+                    possibleTypes = new string[] { integer_type_name, real_type_name, biginteger_type_name };
+
+                    possibleCombinations = possibleTypes.SelectMany(t => possibleTypes, (t1, t2) => Tuple.Create(t1, t2))
+                                 .Where(tt => !tt.Equals(Tuple.Create(real_type_name, biginteger_type_name))
+                                              && !tt.Equals(Tuple.Create(biginteger_type_name, real_type_name)));
+
+                    if (possibleCombinations.Contains(Tuple.Create(left.type.name, right.type.name)))
                     {
-                        //var divnode = new bin_expr(new semantic_addr_value(left, left.location), new semantic_addr_value(right, right.location), Operators.IntegerDivision, _bin_expr.source_context);
-                        //var multnode = new bin_expr(new semantic_addr_value(right, right.location), divnode, Operators.Multiplication);
-                        //var modnode = new bin_expr(new semantic_addr_value(left, left.location), multnode, Operators.Minus);
                         var exprlist = new expression_list(); exprlist.source_context = _bin_expr.source_context;
                         exprlist.Add(new semantic_addr_value(left, left.location));
                         exprlist.Add(new semantic_addr_value(right, right.location));
-                        var modnode = new method_call(new ident("!FloorMod"), exprlist, _bin_expr.source_context);
+                        var modnode = new method_call(new ident("!Mod"), exprlist, _bin_expr.source_context);
                         visit(modnode);
                         return;
                     }

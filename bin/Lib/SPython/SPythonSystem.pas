@@ -44,7 +44,9 @@ type kwargs_gen<T> = class
     end;
 
 function all(s: sequence of boolean): boolean;
+function all(s: sequence of integer): boolean;
 function any(s: sequence of boolean): boolean;
+function any(s: sequence of integer): boolean;
 
 function enumerate<T>(s: sequence of T; start: integer := 0): sequence of (integer,T);
 function filter<T>(cond: T -> boolean; s: sequence of T): sequence of T;
@@ -55,6 +57,16 @@ function int(val: string): integer;
 
 function int(val: real): integer;
 
+function int(b: boolean): integer;
+
+function str(val: object): string;
+
+function float(val: string): real;
+
+function float(x: integer): real;
+
+function bool(val: integer): boolean;
+
 function round(val: real): integer;
 
 function split(s: string): sequence of string;
@@ -63,15 +75,6 @@ function get_keys<K, V>(dct: Dictionary<K, V>): sequence of K;
 function get_values<K, V>(dct: Dictionary<K, V>): sequence of V;
 
 function &type(obj: object): string;
-
-//function int(val: string): integer;
-function int(b: boolean): integer;
-
-function str(val: object): string;
-
-function float(val: string): real;
-
-function float(x: integer): real;
 
 // Basic sequence functions
 
@@ -87,10 +90,6 @@ function !format(i: integer; fmt: string): string;
 
 function !format(val: real; fmt: string): string;
 
-//function all<T>(seq: sequence of T): boolean;
-
-//function any<T>(seq: sequence of T): boolean;
-
 //------------------------------------
 //     Standard Math functions
 //------------------------------------
@@ -100,9 +99,6 @@ function abs(x: integer): integer;
 /// Возвращает абсолютное значение числа
 function abs(x: real): real;
 
-/// Возвращает результат и остаток от целочисленного деления 
-function divmod(a,b: integer): (integer,integer);
-
 /// Возвращает x в степени y
 function pow(x,y: real): real;
 /// Возвращает x в целой степени n
@@ -110,7 +106,7 @@ function pow(x: real; n: integer): real;
 /// Возвращает x в целой степени n
 function pow(x: BigInteger; n: integer): BigInteger;
 
-// function floor(x: real): real;
+{$region STANDARD CONTAINERS}
 
 type list<T> = class(IEnumerable<T>)
     private
@@ -490,6 +486,8 @@ type dict<K, V> = class(IEnumerable<PABCSystem.KeyValuePair<K, V>>)
     function System.Collections.IEnumerable.GetEnumerator() : System.Collections.IEnumerator := GetEnumerator();
 end;
 
+{$endregion STANDARD CONTAINERS}
+
 //Standard functions with Lists
 
 function len<T>(lst: list<T>): integer;
@@ -498,13 +496,11 @@ function len<K, V>(dct: dict<K, V>): integer;
 function len<T>(arr: array of T): integer;
 function len(s: string): integer;
 
-// function &set<T>(sq: sequence of T): &set<T>;
-
 function sorted<T>(lst: list<T>): list<T>;
 
-function sum(lst: sequence of integer): integer;
-
-function sum(lst: sequence of real): real;
+function sum(s: sequence of boolean): integer;
+function sum(s: sequence of integer): integer;
+function sum(s: sequence of real): real;
 
 function !assign<T>(var a: T; b: T): T;
 
@@ -523,27 +519,30 @@ function !pow_recursion(x, n: integer): integer;
 function !pow_recursion(x, n: biginteger): biginteger;
 
 // TUPLES BEGIN
-function CreateTuple<T1, T2>(
+  
+function !CreateTuple<T>(v: T): System.Tuple<T>;  
+
+function !CreateTuple<T1, T2>(
     v1: T1; v2: T2
     ): System.Tuple<T1, T2>;
 
-function CreateTuple<T1, T2, T3>(
+function !CreateTuple<T1, T2, T3>(
     v1: T1; v2: T2; v3: T3
     ): System.Tuple<T1, T2, T3>;
 
-function CreateTuple<T1, T2, T3, T4>(
+function !CreateTuple<T1, T2, T3, T4>(
     v1: T1; v2: T2; v3: T3; v4: T4
     ): System.Tuple<T1, T2, T3, T4>;
  
-function CreateTuple<T1, T2, T3, T4, T5>(
+function !CreateTuple<T1, T2, T3, T4, T5>(
     v1: T1; v2: T2; v3: T3; v4: T4; v5: T5
     ): System.Tuple<T1, T2, T3, T4, T5>;
 
-function CreateTuple<T1, T2, T3, T4, T5, T6>(
+function !CreateTuple<T1, T2, T3, T4, T5, T6>(
     v1: T1; v2: T2; v3: T3; v4: T4; v5: T5; v6: T6
     ): System.Tuple<T1, T2, T3, T4, T5, T6>;
 
-function CreateTuple<T1, T2, T3, T4, T5, T6, T7>(
+function !CreateTuple<T1, T2, T3, T4, T5, T6, T7>(
     v1: T1; v2: T2; v3: T3; v4: T4; v5: T5; v6: T6; v7: T7
     ): System.Tuple<T1, T2, T3, T4, T5, T6, T7>;
 
@@ -551,12 +550,14 @@ function CreateTuple<T1, T2, T3, T4, T5, T6, T7>(
 
 type 
     biginteger = PABCSystem.BigInteger;
-    tuple2<T1, T2> = System.Tuple<T1, T2>;
-    tuple3<T1, T2, T3> = System.Tuple<T1, T2, T3>;
-    tuple4<T1, T2, T3, T4> = System.Tuple<T1, T2, T3, T4>;
-    tuple5<T1, T2, T3, T4, T5> = System.Tuple<T1, T2, T3, T4, T5>;
-    tuple6<T1, T2, T3, T4, T5, T6> = System.Tuple<T1, T2, T3, T4, T5, T6>;
-    tuple7<T1, T2, T3, T4, T5, T6, T7> = System.Tuple<T1, T2, T3, T4, T5, T6, T7>;
+    tuple = System.Tuple;
+    !tuple1<T> = System.Tuple<T>;
+    !tuple2<T1, T2> = System.Tuple<T1, T2>;
+    !tuple3<T1, T2, T3> = System.Tuple<T1, T2, T3>;
+    !tuple4<T1, T2, T3, T4> = System.Tuple<T1, T2, T3, T4>;
+    !tuple5<T1, T2, T3, T4, T5> = System.Tuple<T1, T2, T3, T4, T5>;
+    !tuple6<T1, T2, T3, T4, T5, T6> = System.Tuple<T1, T2, T3, T4, T5, T6>;
+    !tuple7<T1, T2, T3, T4, T5, T6, T7> = System.Tuple<T1, T2, T3, T4, T5, T6, T7>;
     
     empty_list = class
     class function operator implicit<T>(x: empty_list): list<T>; 
@@ -645,6 +646,8 @@ function float(val: string): real := real.Parse(val);
 
 function float(x: integer): real := PABCSystem.Floor(x);
 
+function bool(val: integer): boolean := Convert.ToBoolean(val);
+
 function range(s: integer; e: integer; step: integer): sequence of integer;
 begin
   Result := PABCSystem.Range(s, e - PABCSystem.Sign(step), step);
@@ -660,20 +663,12 @@ begin
   Result := PABCSystem.Range(0, e - 1);
 end;
 
-//function all<T>(seq: sequence of T): boolean := seq.All(x -> x);
-
-//function any<T>(seq: sequence of T): boolean := seq.Any(x -> x);
-
 //------------------------------------
 //     Standard Math functions
 //------------------------------------
 
 function abs(x: integer): integer := if x >= 0 then x else -x;
 function abs(x: real): real := PABCSystem.Abs(x);
-
-function divmod(a,b: integer): (integer,integer) 
-  := (a div b, a mod b);
-// divmod вещественный аналог надо реализовать на питоне бы
 
 function pow(x,y: real): real := PABCSystem.Power(x,y);
 
@@ -694,8 +689,9 @@ begin
   Result := newList;
 end;
 
-function sum(lst: sequence of integer): integer := lst.sum();
-function sum(lst: sequence of real): real := lst.sum();
+function sum(s: sequence of boolean): integer := s.Select(x -> Convert.ToInt32(x)).Sum();
+function sum(s: sequence of integer): integer := s.Sum();
+function sum(s: sequence of real): real := s.Sum();
 
 function !assign<T>(var a: T; b: T): T;
 begin
@@ -779,42 +775,40 @@ function get_keys<K, V>(dct: Dictionary<K, V>):= dct.keys;
 function get_values<K, V>(dct: Dictionary<K, V>):= dct.values;
 
 // TUPLES BEGIN
-function CreateTuple<T1, T2>(
+
+function !CreateTuple<T>(v: T): System.Tuple<T> := Tuple.Create(v);
+
+function !CreateTuple<T1, T2>(
     v1: T1; v2: T2
     ): System.Tuple<T1, T2> 
       := (v1, v2);
 
-function CreateTuple<T1, T2, T3>(
+function !CreateTuple<T1, T2, T3>(
     v1: T1; v2: T2; v3: T3
     ): System.Tuple<T1, T2, T3> 
       := (v1, v2, v3);
 
-function CreateTuple<T1, T2, T3, T4>(
+function !CreateTuple<T1, T2, T3, T4>(
     v1: T1; v2: T2; v3: T3; v4: T4
     ): System.Tuple<T1, T2, T3, T4> 
       := (v1, v2, v3, v4);
  
-function CreateTuple<T1, T2, T3, T4, T5>(
+function !CreateTuple<T1, T2, T3, T4, T5>(
     v1: T1; v2: T2; v3: T3; v4: T4; v5: T5
     ): System.Tuple<T1, T2, T3, T4, T5> 
       := (v1, v2, v3, v4, v5);
 
-function CreateTuple<T1, T2, T3, T4, T5, T6>(
+function !CreateTuple<T1, T2, T3, T4, T5, T6>(
     v1: T1; v2: T2; v3: T3; v4: T4; v5: T5; v6: T6
     ): System.Tuple<T1, T2, T3, T4, T5, T6> 
       := (v1, v2, v3, v4, v5, v6);
 
-function CreateTuple<T1, T2, T3, T4, T5, T6, T7>(
+function !CreateTuple<T1, T2, T3, T4, T5, T6, T7>(
     v1: T1; v2: T2; v3: T3; v4: T4; v5: T5; v6: T6; v7: T7
     ): System.Tuple<T1, T2, T3, T4, T5, T6, T7> 
       := (v1, v2, v3, v4, v5, v6, v7);
 
 // TUPLES END
-
-//function &set<T>(sq: sequence of T): &set<T>;
-//begin
-//  Result := new &set<T>(sq);
-//end;
 
 function all(s: sequence of boolean): boolean;
 begin
@@ -827,6 +821,8 @@ begin
     end;
 end;
 
+function all(s: sequence of integer): boolean := all(s.Select(x -> Convert.ToBoolean(x)));
+
 function any(s: sequence of boolean): boolean;
 begin
   Result := false;
@@ -837,6 +833,8 @@ begin
       break;
     end;
 end;
+
+function any(s: sequence of integer): boolean := any(s.Select(x -> Convert.ToBoolean(x)));
 
 ///-
 function ToDictionary<T, U>(Self: sequence of System.Tuple<T, U>): dict<T, U>; extensionmethod;
