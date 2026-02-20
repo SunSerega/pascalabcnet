@@ -16,6 +16,11 @@ type
     function Predict(X: Matrix): Vector;
     function Clone: IModel;
   end;
+  
+  /// Интерфейс древовидной модели машинного обучения
+  ITreeModel = interface(IModel)
+    function FeatureImportances: Vector;
+  end;
 
   /// Интерфейс классификатора.
   /// Наследуется от IModel.
@@ -32,7 +37,7 @@ type
   /// вместо только итогового решения.
   IProbabilisticClassifier = interface(IClassifier)
     /// Возвращает вероятность принадлежности к положительному классу для каждого объекта.
-    function PredictProba(X: Matrix): Vector;
+    function PredictProba(X: Matrix): Matrix;
   end;
 
   /// Интерфейс регрессионной модели.
