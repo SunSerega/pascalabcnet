@@ -11,6 +11,7 @@ uses MetricsABC;
 uses PreprocessorABC;
 uses DataFrameABC;
 uses MLExceptions;
+uses InspectionML;
 
 type 
   Vector = LinearAlgebraML.Vector;
@@ -45,11 +46,16 @@ type
   DecisionTreeRegressor = MLModelsABC.DecisionTreeRegressor;
   RandomForestRegressor = MLModelsABC.RandomForestRegressor;
   RandomForestClassifier = MLModelsABC.RandomForestClassifier;
+  GradientBoostingRegressor = MLModelsABC.GradientBoostingRegressor;
+  
+  TGBLoss = MLModelsABC.TGBLoss;
   TMaxFeaturesMode = MLModelsABC.TMaxFeaturesMode;
 
   MLException = MLExceptions.MLException;
   MLNotFittedException = MLExceptions.MLNotFittedException;
   MLDimensionException = MLExceptions.MLDimensionException;
+  
+  Inspection = InspectionML.Inspection;
   
 implementation
 

@@ -277,6 +277,7 @@ type
     fFeatureImportances: Vector;
     fRandomSeed: integer;
     fMaxFeatures := 0;
+    fRowIndices: array of integer := nil;
   
     function BuildTree(X: Matrix; y: Vector; indices: array of integer; depth: integer): DecisionTreeNode;
   
@@ -292,7 +293,8 @@ type
     function LeafNode(value: real): DecisionTreeNode;
     procedure CopyBaseState(dest: DecisionTreeBase);
     function GetFeatureSubset(nFeatures: integer): array of integer; virtual;
-
+    
+    procedure SetRowIndices(rows: array of integer);
   public
     constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1);
   
@@ -431,6 +433,67 @@ type
     function Clone: IModel; override;
     
     function FeatureImportances: Vector; override;
+  end;
+  
+  TGBLoss = (SquaredError, Huber);
+  
+  GradientBoostingRegressor = class(IRegressor)
+  private
+    fNEstimators: integer;
+    fLearningRate: real;
+    fMaxDepth: integer;
+    fMinSamplesSplit: integer;
+    fMinSamplesLeaf: integer;
+    fSubsample: real;
+    fRandomSeed: integer;
+
+    fEstimators: List<DecisionTreeRegressor>;
+    fInitValue: real;
+    fFitted: boolean;
+    fFeatureCount: integer;
+// -----------  
+    fLoss: TGBLoss;
+    fHuberDelta: real;
+  
+    fEarlyStoppingPatience: integer;
+  
+    fTrainLossHistory: List<real>;
+    fBestTrainLoss: real;
+    fBestIteration: integer;
+    
+    fValLossHistory: List<real>;
+    fBestValLoss: real;
+    
+    function ComputeTrainLoss(y, yPred: Vector): real;
+    procedure ComputePseudoResiduals(y, yPred: Vector; r: Vector);
+    
+    function FitInternal(XTrain: Matrix; yTrain: Vector;
+      XVal: Matrix; yVal: Vector; useValidation: boolean): IModel;
+    
+  public
+    constructor Create(
+      nEstimators: integer := 100;
+      learningRate: real := 0.1;
+      maxDepth: integer := 3;
+      minSamplesSplit: integer := 2;
+      minSamplesLeaf: integer := 1;
+      subsample: real := 1.0;
+      randomSeed: integer := 42;
+      loss: TGBLoss := TGBLoss.SquaredError;
+      huberDelta: real := 1.0;
+      earlyStoppingPatience: integer := 0      
+      );
+
+    function Fit(X: Matrix; y: Vector): IModel;
+    function Predict(X: Matrix): Vector;
+    function Clone: IModel;
+    
+    function FitWithValidation(XTrain: Matrix; yTrain: Vector;
+      XVal: Matrix; yVal: Vector): IModel;
+    
+    property TrainLossHistory: List<real> read fTrainLossHistory;
+    property ValLossHistory: List<real> read fValLossHistory;
+    property BestIteration: integer read fBestIteration;
   end;
 
 {$endregion Models}
@@ -766,6 +829,23 @@ const
     'Неизвестный тип FeatureScore!!Unknown FeatureScore type';
   ER_SELECTKBEST_FIT_INVALID =
     'Для SelectKBest необходимо вызывать Fit(X, y)!!SelectKBest requires Fit(X, y)';
+  ER_FIT_NOT_CALLED =
+    'Необходимо вызвать Fit перед Predict!!Fit must be called before Predict';
+  ER_X_NULL =
+    'X не может быть nil!!X cannot be nil';
+  ER_Y_NULL =
+    'y не может быть nil!!y cannot be nil';
+  ER_XY_SIZE_MISMATCH =
+    'Размерности X и y не согласованы!!X and y size mismatch';
+  ER_FEATURE_COUNT_MISMATCH =
+    'Число признаков не совпадает!!Feature count mismatch';
+  ER_N_ESTIMATORS_NOT_POSITIVE =
+    'Параметр nEstimators должен быть > 0!!nEstimators must be > 0';
+  ER_LEARNING_RATE_NOT_POSITIVE =
+    'Параметр learningRate должен быть > 0!!learningRate must be > 0';
+  ER_SUBSAMPLE_OUT_OF_RANGE =
+    'Параметр subsample должен быть в диапазоне (0, 1]!!subsample must be in (0, 1]';  
+    
 {$endregion ErrConstants}  
   
 //-----------------------------
@@ -1473,6 +1553,14 @@ begin
   Result := subset;
 end;
 
+procedure DecisionTreeBase.SetRowIndices(rows: array of integer);
+begin
+  if Length(rows) = 0 then
+    ArgumentError('Row subset cannot be empty!!Row subset cannot be empty');
+
+  fRowIndices := Copy(rows);
+end;
+
 function DecisionTreeBase.FeatureImportances: Vector;
 begin
   Result := fFeatureImportances.Clone;
@@ -1979,6 +2067,8 @@ begin
   Result := MajorityClass(y, indices);
 end;
 
+// DecisionTreeRegressor
+
 constructor DecisionTreeRegressor.Create(maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer);
 begin
   inherited Create(maxDepth, minSamplesSplit, minSamplesLeaf);
@@ -2021,18 +2111,28 @@ begin
   
   fFeatureImportances := new Vector(X.Cols);
 
-  var indices := new integer[X.Rows];
-  for var i := 0 to X.Rows - 1 do
-    indices[i] := i;
+  var indices: array of integer;
+
+  // 🔹 Ключевое изменение
+  if fRowIndices = nil then
+  begin
+    SetLength(indices, X.Rows);
+    for var i := 0 to X.Rows - 1 do
+      indices[i] := i;
+  end
+  else
+    indices := fRowIndices;
 
   fRoot := BuildTree(X, y, indices, 0);
   
   var s := fFeatureImportances.Sum;
   if s > 0 then
-    for var i := 0 to fFeatureImportances.Length-1 do
+    for var i := 0 to fFeatureImportances.Length - 1 do
       fFeatureImportances[i] /= s;
   
   fFitted := true;
+  
+  fRowIndices := nil;
 
   Result := Self;
 end;
@@ -2076,6 +2176,7 @@ begin
 
   Result := m;
 end;
+
 
 //-----------------------------
 //      RandomForestBase 
@@ -2354,6 +2455,319 @@ begin
   Result := resultVec;
 end;
 
+//-----------------------------
+//  GradientBoostingRegressor 
+//-----------------------------
+constructor GradientBoostingRegressor.Create(
+  nEstimators: integer;
+  learningRate: real;
+  maxDepth: integer;
+  minSamplesSplit: integer;
+  minSamplesLeaf: integer;
+  subsample: real;
+  randomSeed: integer;
+  loss: TGBLoss;
+  huberDelta: real;
+  earlyStoppingPatience: integer);
+begin
+  if nEstimators <= 0 then
+    ArgumentOutOfRangeError(ER_N_ESTIMATORS_NOT_POSITIVE);
+
+  if learningRate <= 0 then
+    ArgumentOutOfRangeError(ER_LEARNING_RATE_NOT_POSITIVE);
+
+  if (subsample <= 0) or (subsample > 1) then
+    ArgumentOutOfRangeError(ER_SUBSAMPLE_OUT_OF_RANGE);
+
+  fNEstimators := nEstimators;
+  fLearningRate := learningRate;
+  fMaxDepth := maxDepth;
+  fMinSamplesSplit := minSamplesSplit;
+  fMinSamplesLeaf := minSamplesLeaf;
+  fSubsample := subsample;
+  fRandomSeed := randomSeed;
+
+  fEstimators := new List<DecisionTreeRegressor>;
+  fFitted := false;
+  
+// -------------  
+  if huberDelta <= 0 then
+    ArgumentOutOfRangeError('huberDelta must be > 0!!huberDelta must be > 0');
+  
+  if earlyStoppingPatience < 0 then
+    ArgumentOutOfRangeError('earlyStoppingPatience must be >= 0!!earlyStoppingPatience must be >= 0');
+  
+  fLoss := loss;
+  fHuberDelta := huberDelta;
+  fEarlyStoppingPatience := earlyStoppingPatience;
+  
+  fTrainLossHistory := new List<real>;
+  fValLossHistory := new List<real>;
+end;
+
+function GradientBoostingRegressor.ComputeTrainLoss(y, yPred: Vector): real;
+begin
+  var n := y.Length;
+  var loss := 0.0;
+
+  if fLoss = TGBLoss.SquaredError then
+  begin
+    for var i := 0 to n - 1 do
+    begin
+      var d := y[i] - yPred[i];
+      loss += d * d;
+    end;
+    Result := loss / n;
+    exit;
+  end;
+
+  // Huber
+  var delta := fHuberDelta;
+  for var i := 0 to n - 1 do
+  begin
+    var d := y[i] - yPred[i];
+    var ad := Abs(d);
+    if ad <= delta then
+      loss += 0.5 * d * d
+    else
+      loss += delta * (ad - 0.5 * delta);
+  end;
+
+  Result := loss / n;
+end;
+
+procedure GradientBoostingRegressor.ComputePseudoResiduals(y, yPred: Vector; r: Vector);
+begin
+  var n := y.Length;
+
+  if fLoss = TGBLoss.SquaredError then
+  begin
+    for var i := 0 to n - 1 do
+      r[i] := y[i] - yPred[i];
+    exit;
+  end;
+
+  // Huber: псевдо-остатки = антиградиент
+  var delta := fHuberDelta;
+  for var i := 0 to n - 1 do
+  begin
+    var d := y[i] - yPred[i];
+    var ad := Abs(d);
+    if ad <= delta then
+      r[i] := d
+    else
+      r[i] := delta * Sign(d);
+  end;
+end;
+
+const MinImprovement = 1e-12;
+
+function GradientBoostingRegressor.Fit(X: Matrix; y: Vector): IModel;
+begin
+  Result := FitInternal(X, y, nil, nil, false);
+end;
+
+function GradientBoostingRegressor.FitWithValidation(
+  XTrain: Matrix; yTrain: Vector;
+  XVal: Matrix; yVal: Vector): IModel;
+begin
+  Result := FitInternal(XTrain, yTrain, XVal, yVal, true);
+end;
+
+function GradientBoostingRegressor.FitInternal(
+  XTrain: Matrix; yTrain: Vector;
+  XVal: Matrix; yVal: Vector;
+  useValidation: boolean): IModel;
+begin
+  // --- checks ---
+  if XTrain = nil then ArgumentNullError(ER_X_NULL);
+  if yTrain = nil then ArgumentNullError(ER_Y_NULL);
+
+  if XTrain.Rows <> yTrain.Length then
+    DimensionError(ER_XY_SIZE_MISMATCH);
+
+  if XTrain.Rows = 0 then
+    ArgumentError(ER_EMPTY_DATASET);
+
+  if useValidation then
+  begin
+    if XVal = nil then ArgumentNullError(ER_X_NULL);
+    if yVal = nil then ArgumentNullError(ER_Y_NULL);
+
+    if XVal.Rows <> yVal.Length then
+      DimensionError(ER_XY_SIZE_MISMATCH);
+
+    if XVal.Cols <> XTrain.Cols then
+      DimensionError(ER_FEATURE_COUNT_MISMATCH);
+  end;
+
+  // --- init state ---
+  fEstimators.Clear;
+  fFeatureCount := XTrain.Cols;
+
+  fTrainLossHistory.Clear;
+  fValLossHistory.Clear;
+
+  fBestIteration := -1;
+  fBestTrainLoss := real.PositiveInfinity;
+  fBestValLoss := real.PositiveInfinity;
+
+  var noImprove := 0;
+
+  // --- F0 = mean(yTrain) ---
+  var nTrain := yTrain.Length;
+  var sum := 0.0;
+  for var i := 0 to nTrain - 1 do
+    sum += yTrain[i];
+  fInitValue := sum / nTrain;
+
+  var yPredTrain := new Vector(nTrain);
+  for var i := 0 to nTrain - 1 do
+    yPredTrain[i] := fInitValue;
+
+  var yPredVal: Vector := nil;
+  if useValidation then
+  begin
+    var nVal := yVal.Length;
+    yPredVal := new Vector(nVal);
+    for var i := 0 to nVal - 1 do
+      yPredVal[i] := fInitValue;
+  end;
+
+  Randomize(fRandomSeed);
+
+  // --- boosting loop ---
+  for var m := 0 to fNEstimators - 1 do
+  begin
+    // pseudo-residuals on TRAIN only
+    var r := new Vector(nTrain);
+    ComputePseudoResiduals(yTrain, yPredTrain, r);
+
+    var tree := new DecisionTreeRegressor(
+      fMaxDepth,
+      fMinSamplesSplit,
+      fMinSamplesLeaf
+    );
+
+    if fSubsample < 1.0 then
+    begin
+      var k := Round(nTrain * fSubsample);
+      if k < 1 then k := 1;
+
+      var rows := new integer[k];
+      for var i := 0 to k - 1 do
+        rows[i] := Random(nTrain);
+
+      tree.SetRowIndices(rows);
+    end;
+
+    tree.Fit(XTrain, r);
+    fEstimators.Add(tree);
+
+    // update TRAIN prediction
+    var deltaTrain := tree.Predict(XTrain);
+    for var i := 0 to nTrain - 1 do
+      yPredTrain[i] += fLearningRate * deltaTrain[i];
+
+    // update VAL prediction (if used)
+    if useValidation then
+    begin
+      var deltaVal := tree.Predict(XVal);
+      for var i := 0 to yPredVal.Length - 1 do
+        yPredVal[i] += fLearningRate * deltaVal[i];
+    end;
+
+    // losses
+    var trainLoss := ComputeTrainLoss(yTrain, yPredTrain);
+    fTrainLossHistory.Add(trainLoss);
+
+    var scoreLoss: real; // this is what we early-stop on
+    if useValidation then
+    begin
+      var valLoss := ComputeTrainLoss(yVal, yPredVal);
+      fValLossHistory.Add(valLoss);
+      scoreLoss := valLoss;
+    end
+    else
+      scoreLoss := trainLoss;
+
+    // early stopping
+    if fEarlyStoppingPatience > 0 then
+    begin
+      if (fBestValLoss - scoreLoss > MinImprovement) then
+      begin
+        fBestValLoss := scoreLoss;
+        fBestIteration := m;
+        noImprove := 0;
+      end
+      else
+      begin
+        noImprove += 1;
+        if noImprove >= fEarlyStoppingPatience then
+          break;
+      end;
+    end;
+  end;
+
+  // if stopping enabled: cut trees after best iteration
+  if (fEarlyStoppingPatience > 0) and (fBestIteration >= 0) then
+  begin
+    var keep := fBestIteration + 1;
+    if fEstimators.Count > keep then
+      fEstimators.RemoveRange(keep, fEstimators.Count - keep);
+  end;
+
+  fFitted := true;
+  Result := Self;
+end;
+
+function GradientBoostingRegressor.Predict(X: Matrix): Vector;
+begin
+  if not fFitted then
+    NotFittedError(ER_FIT_NOT_CALLED);
+
+  if X = nil then
+    ArgumentNullError(ER_X_NULL);
+
+  if X.Cols <> fFeatureCount then
+    DimensionError(ER_FEATURE_COUNT_MISMATCH);
+
+  var n := X.Rows;
+  var yPred := new Vector(n);
+
+  for var i := 0 to n - 1 do
+    yPred[i] := fInitValue;
+
+  foreach var tree in fEstimators do
+  begin
+    var delta := tree.Predict(X);
+    for var i := 0 to n - 1 do
+      yPred[i] += fLearningRate * delta[i];
+  end;
+
+  Result := yPred;
+end;
+
+function GradientBoostingRegressor.Clone: IModel;
+begin
+  var copy := new GradientBoostingRegressor(
+    fNEstimators,
+    fLearningRate,
+    fMaxDepth,
+    fMinSamplesSplit,
+    fMinSamplesLeaf,
+    fSubsample,
+    fRandomSeed);
+
+  copy.fInitValue := fInitValue;
+  copy.fFeatureCount := fFeatureCount;
+  copy.fFitted := fFitted;
+
+  foreach var tree in fEstimators do
+    copy.fEstimators.Add(tree.Clone as DecisionTreeRegressor);
+
+  Result := copy;
+end;
 
 
 //-----------------------------
