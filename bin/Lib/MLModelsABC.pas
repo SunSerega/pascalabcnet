@@ -12,15 +12,13 @@ type
   public  
     /// Функция активации Sigmoid (логистическая функция).
     /// Преобразует любое число в диапазон (0, 1).
-    /// Используется в логистической регрессии
-    /// и других моделях для получения вероятности.
+    /// Используется в логистической регрессии и других моделях для получения вероятности.
     /// Формула: σ(x) = 1 / (1 + e^(−x)).  
     static function Sigmoid(v: Vector): Vector;
     
     /// Функция активации Tanh (гиперболический тангенс).
     /// Похожа на Sigmoid, но значения лежат в диапазоне (−1, 1).
-    /// Применяется в моделях, где требуется
-    /// симметричная нелинейность относительно нуля.
+    /// Применяется в моделях, где требуется симметричная нелинейность относительно нуля.
     /// Формула: tanh(x) = (e^x − e^(−x)) / (e^x + e^(−x)).
     static function Tanh(v: Vector): Vector;
     
@@ -34,8 +32,7 @@ type
     
     /// Функция активации Softmax.
     /// Преобразует набор значений в вероятностное распределение:
-    /// все элементы неотрицательны,
-    /// их сумма равна 1.
+    ///   все элементы неотрицательны, их сумма равна 1.
     /// Используется в задачах многоклассовой классификации.
     /// Каждый элемент интерпретируется как вероятность класса.
     /// Формула: softmax(x_i) = e^{x_i} / Σ e^{x_j}.
@@ -50,7 +47,7 @@ type
 /// Линейная регрессионная модель (метод наименьших квадратов).
 /// Предсказывает числовое значение по линейной комбинации признаков
 /// Используется в задачах регрессии при отсутствии выраженной
-/// мультиколлинеарности и когда число признаков существенно меньше числа объектов.
+///   мультиколлинеарности и когда число признаков существенно меньше числа объектов
   LinearRegression = class(IRegressor)
   private
     fCoef: Vector;
@@ -60,8 +57,8 @@ type
     constructor Create();
 
     /// Обучает модель на числовых данных
-    /// X — матрица m × n (m объектов, n признаков)
-    /// y — вектор длины m
+    ///   X — матрица m × n (m объектов, n признаков)
+    ///   y — вектор длины m
     function Fit(X: Matrix; y: Vector): IModel;
 
     /// Предсказывает значения для матрицы признаков
@@ -79,7 +76,7 @@ type
     property Intercept: real read fIntercept;
     
 /// Показывает, была ли модель обучена.
-/// После вызова Fit значение становится true.
+/// После вызова Fit значение становится True.
 /// Используется для проверки корректности вызова Predict.
     property IsFitted: boolean read fFitted;
     
@@ -90,10 +87,10 @@ type
   
 /// Линейная регрессионная модель с L2-регуляризацией (Ridge).
 /// Минимизирует функцию:
-///     ||y - (Xβ + b)||² + λ ||β||².
+///     ‖y - (Xβ + b)‖² + λ ‖β‖².
 /// Устойчива к мультиколлинеарности и плохо обусловленным данным.
 /// Используется при коррелированных признаках
-/// и в задачах, где важна численная стабильность решения.
+/// и в задачах, где важна численная стабильность решения
   RidgeRegression = class(IRegressor)
   private
     fLambda: real;
@@ -101,13 +98,13 @@ type
     fIntercept: real;
     fFitted: boolean;
   public
-    /// Создаёт модель Ridge-регрессии.
-    /// lambda — коэффициент L2-регуляризации (0 — обычная линейная регрессия).
+    /// Создаёт модель Ridge-регрессии:
+    ///   • lambda — коэффициент L2-регуляризации (0 — обычная линейная регрессия)
     constructor Create(lambda: real := 1.0);
   
     /// Обучает модель на числовых данных.
-    /// X — матрица m × n (m объектов, n признаков).
-    /// y — вектор длины m с непрерывными значениями.
+    ///   X — матрица m × n (m объектов, n признаков).
+    ///   y — вектор длины m с непрерывными значениями.
     /// Выполняется центрирование признаков и целевой переменной.
     function Fit(X: Matrix; y: Vector): IModel;
   
@@ -138,9 +135,9 @@ type
   
 /// Линейная регрессионная модель ElasticNet.
 /// Минимизирует функцию:
-///     ||y - (Xβ + b)||² + λ1 ||β||₁ + λ2 ||β||².
+///   ‖y - (Xβ + b)‖² + λ1 ‖β‖₁ + λ2 ‖β‖².
 /// Объединяет L1-регуляризацию (разреженность, отбор признаков)
-/// и L2-регуляризацию (численная устойчивость).
+///   и L2-регуляризацию (численная устойчивость).
 /// Используется при большом числе признаков, особенно если признаки коррелированы.
 /// Обучение выполняется методом покоординатного спуска 
   ElasticNet = class(IRegressor)
@@ -154,20 +151,20 @@ type
     fIntercept: real;
     fFitted: boolean;
     /// Применяет оператор мягкого порога:
-    /// soft(z, γ) = sign(z) * max(|z| - γ, 0).
+    ///   soft(z, γ) = sign(z) * max(|z| - γ, 0).
     /// Используется для реализации L1-регуляризации.
     function SoftThreshold(z, gamma: real): real;
   public
-    /// Создаёт модель ElasticNet.
-    /// lambda1 — коэффициент L1-регуляризации (>= 0).
-    /// lambda2 — коэффициент L2-регуляризации (>= 0).
-    /// maxIter — максимальное число итераций coordinate descent.
-    /// tol — критерий остановки по изменению коэффициентов.
+    /// Создаёт модель ElasticNet:
+    ///   • lambda1 — коэффициент L1-регуляризации (>= 0).
+    ///   • lambda2 — коэффициент L2-регуляризации (>= 0).
+    ///   • maxIter — максимальное число итераций coordinate descent.
+    ///   • tol — критерий остановки по изменению коэффициентов.
     constructor Create(lambda1, lambda2: real; maxIter: integer := 1000; tol: real := 1e-6);
   
     /// Обучает модель на числовых данных.
-    /// X — матрица m × n (m объектов, n признаков).
-    /// y — вектор длины m с непрерывными значениями.
+    ///   X — матрица m × n (m объектов, n признаков).
+    ///   y — вектор длины m с непрерывными значениями.
     /// Выполняется центрирование признаков и целевой переменной.
     function Fit(X: Matrix; y: Vector): IModel;
   
@@ -185,7 +182,7 @@ type
     property Intercept: real read fIntercept;
   
     /// Показывает, была ли модель обучена.
-    /// После вызова Fit значение становится true.
+    /// После вызова Fit значение становится True.
     property IsFitted: boolean read fFitted;
     
     function ToString: string; override;
@@ -196,9 +193,9 @@ type
 /// Логистическая регрессия.
 /// Поддерживает бинарную и многоклассовую классификацию.
 /// Для нескольких классов используется softmax,
-/// для двух классов — частный случай softmax.
+///   для двух классов — частный случай softmax.
 /// Оптимизация выполняется по кросс-энтропийной функции потерь
-/// с поддержкой L2-регуляризации.
+///   с поддержкой L2-регуляризации
   LogisticRegression = class(IProbabilisticClassifier)
   private
     fW: Matrix;      // p x k
@@ -213,14 +210,14 @@ type
   public
     /// lambda — коэффициент L2-регуляризации.
     /// lr — шаг градиентного спуска.
-    /// epochs — число итераций обучения.
+    /// epochs — число итераций обучения
     constructor Create(lambda: real := 0.0; lr: real := 0.1; epochs: integer := 1000);
   
 /// Обучает модель логистической регрессии.
-/// X — матрица признаков.
-/// y — вектор меток классов (целочисленные значения).
+///   X — матрица признаков.
+///   y — вектор меток классов (целочисленные значения).
 /// Возвращает обученную модель.
-/// После вызова IsFitted становится true.
+/// После вызова IsFitted становится True.
     function Fit(X: Matrix; y: Vector): IModel;
   
     /// Возвращает матрицу вероятностей (m x k).
@@ -253,7 +250,7 @@ type
     function Clone: DecisionTreeNode;
   end;
   
-/// Результат поиска лучшего разбиения узла дерева.
+/// Результат поиска лучшего разбиения узла дерева
   SplitResult = record
 /// Found = true, если допустимое разбиение найдено.
     Found: boolean;
@@ -264,7 +261,7 @@ type
   end;
   
 /// Интерфейс критерия разбиения узла дерева.
-/// Определяет функцию нечистоты (impurity), которая используется для оценки качества разбиения.
+/// Определяет функцию нечистоты (impurity), которая используется для оценки качества разбиения
   ISplitCriterion = interface
 /// Вычисляет нечистоту для вектора целевых значений y.
 /// Чем меньше значение — тем "чище" узел.
@@ -273,7 +270,7 @@ type
   
 /// Критерий Джини.
 /// Используется в классификации.
-/// Минимизирует Gini-нечистоту, что приводит к более однородным по классам листьям.
+/// Минимизирует Gini-нечистоту, что приводит к более однородным по классам листьям
   GiniCriterion = class(ISplitCriterion)
   public
 /// Вычисляет Gini impurity для текущего набора y.  
@@ -282,7 +279,7 @@ type
 
 /// Критерий дисперсии.
 /// Используется в регрессии.
-/// Минимизирует внутригрупповую дисперсию значений целевой переменной.
+/// Минимизирует внутригрупповую дисперсию значений целевой переменной
   VarianceCriterion = class(ISplitCriterion)
   public
   /// Вычисляет дисперсию значений y.
@@ -295,10 +292,9 @@ type
 //============================  
 /// Базовый абстрактный класс дерева решений.
 /// Реализует общую логику построения структуры дерева:
-/// рекурсивное разбиение, контроль глубины,
-/// минимального числа объектов и расчет важности признаков.
-/// Конкретная логика вычисления значения листа
-/// и критерия разбиения задается в наследниках.
+///   рекурсивное разбиение, контроль глубины,
+///   минимального числа объектов и расчет важности признаков.
+/// Конкретная логика вычисления значения листа и критерия разбиения задается в наследниках
   DecisionTreeBase = abstract class(ITreeModel)
   protected
     fRoot: DecisionTreeNode;
@@ -311,6 +307,9 @@ type
     fRandomSeed: integer;
     fMaxFeatures := 0;
     fRowIndices: array of integer := nil;
+    
+    fRng: System.Random;
+    fUserProvidedSeed: boolean;
   
     function BuildTree(X: Matrix; y: Vector; indices: array of integer; depth: integer): DecisionTreeNode;
   
@@ -329,15 +328,15 @@ type
     
     procedure SetRowIndices(rows: array of integer);
   public
-/// Создает дерево решений.
-/// maxDepth — максимальная глубина дерева.
-/// minSamplesSplit — минимальное число объектов для разбиения узла.
-/// minSamplesLeaf — минимальное число объектов в листе.
-    constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1);
+/// Создает дерево решений:
+///   • maxDepth — максимальная глубина дерева.
+///   • minSamplesSplit — минимальное число объектов для разбиения узла.
+///   • minSamplesLeaf — минимальное число объектов в листе
+    constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1; seed: integer := -1);
   
 /// Возвращает вектор важности признаков.
 /// Важность вычисляется как суммарное уменьшение
-/// нечистоты (impurity reduction) по всем разбиениям.
+///   нечистоты (impurity reduction) по всем разбиениям.
 /// Значения нормированы так, что сумма равна 1.
     function FeatureImportances: Vector;
     
@@ -367,7 +366,7 @@ type
 //============================  
 /// Дерево решений для задачи классификации.
 /// Использует критерий нечистоты (обычно Gini) для выбора оптимальных разбиений.
-/// В листьях хранится наиболее частый класс.
+/// В листьях хранится наиболее частый класс
   DecisionTreeClassifier = class(DecisionTreeBase, IClassifier)
   private
     fClassToIndex: Dictionary<integer, integer>;
@@ -386,11 +385,11 @@ type
     end;
 
   public
-/// Создает классификационное дерево.
-/// maxDepth — максимальная глубина дерева.
-/// minSamplesSplit — минимальное число объектов для разбиения узла.
-/// minSamplesLeaf — минимальное число объектов в листе.
-    constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1);
+/// Создает классификационное дерево:
+///   • maxDepth — максимальная глубина дерева.
+///   • minSamplesSplit — минимальное число объектов для разбиения узла.
+///   • minSamplesLeaf — минимальное число объектов в листе
+    constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1; seed: integer := -1);
 
 /// Обучает классификационное дерево.
 /// X — матрица признаков.
@@ -417,7 +416,7 @@ type
 /// Наследуется от DecisionTreeBase.
 /// Использует критерий дисперсии для выбора разбиений.
 /// В листьях хранится среднее значение целевой переменной.
-/// Поддерживает L2-регуляризацию значения листа (leafL2).
+/// Поддерживает L2-регуляризацию значения листа (leafL2)
   DecisionTreeRegressor = class(DecisionTreeBase, IRegressor)
   private
     fLeafL2: real;
@@ -438,13 +437,13 @@ type
     function IsPure(y: Vector; indices: array of integer): boolean; override;
     
   public
-/// Создает регрессионное дерево.
-/// maxDepth — максимальная глубина.
-/// minSamplesSplit — минимальное число объектов для разбиения.
-/// minSamplesLeaf — минимальное число объектов в листе.
-/// leafL2 — коэффициент L2-регуляризации значения листа.
+/// Создает регрессионное дерево:
+///   • maxDepth — максимальная глубина.
+///   • minSamplesSplit — минимальное число объектов для разбиения.
+///   • minSamplesLeaf — минимальное число объектов в листе.
+///   • leafL2 — коэффициент L2-регуляризации значения листа
     constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1;
-      leafL2: real := 0.0);
+      leafL2: real := 0.0; seed: integer := -1);
     
 /// Обучает регрессионное дерево.
 /// X — матрица признаков.
@@ -467,18 +466,18 @@ type
 /// Определяет, сколько признаков m из общего числа p
 /// будет случайно выбрано для рассмотрения в узле.
 /// Используется в Random Forest и других ансамблях
-/// для увеличения разнообразия деревьев.  
+/// для увеличения разнообразия деревьев
   TMaxFeaturesMode = (
 /// Использовать все признаки: m = p
     AllFeatures,      
 /// Использовать квадратный корень от числа признаков: m = sqrt(p)
-/// Типичный выбор для классификации.
+/// Типичный выбор для классификации
     SqrtFeatures,
 /// Использовать log2 от числа признаков: m = log2(p)
-/// Более агрессивное ограничение признаков.
+/// Более агрессивное ограничение признаков
     Log2Features,
 /// Использовать половину признаков: m = p / 2
-/// Компромисс между скоростью и разнообразием.
+/// Компромисс между скоростью и разнообразием
     HalfFeatures     
   );
   
@@ -492,10 +491,9 @@ type
 
 /// Базовый абстрактный класс случайного леса.
 /// Реализует ансамбль из множества независимых деревьев,
-/// обученных на случайных подвыборках данных
-/// и случайных подмножествах признаков.
+///   обученных на случайных подвыборках данных и случайных подмножествах признаков.
 /// Конкретная логика агрегирования предсказаний
-/// определяется в наследниках (регрессия или классификация).
+///   определяется в наследниках (регрессия или классификация)
   RandomForestBase = abstract class(IModel)
   protected
     fNTrees: integer;
@@ -504,22 +502,27 @@ type
     fMinSamplesLeaf: integer;
     fMaxFeaturesMode: TMaxFeaturesMode;
     fFitted: boolean;
+    
+    fRandomSeed: integer;
+    fRng: System.Random;
+    fUserProvidedSeed: boolean;
   
     function ComputeMaxFeatures(p: integer): integer;
     procedure BootstrapSample(X: Matrix; y: Vector; var Xb: Matrix; var yb: Vector);
   public
 /// Создает случайный лес.
-/// nTrees — число деревьев в ансамбле.
-/// maxDepth — максимальная глубина каждого дерева.
-/// minSamplesSplit — минимальное число объектов для разбиения узла.
-/// minSamplesLeaf — минимальное число объектов в листе.
-/// maxFeatures — режим выбора числа признаков, рассматриваемых при поиске разбиения.
+///   • nTrees — число деревьев в ансамбле.
+///   • maxDepth — максимальная глубина каждого дерева.
+///   • minSamplesSplit — минимальное число объектов для разбиения узла.
+///   • minSamplesLeaf — минимальное число объектов в листе.
+///   • maxFeatures — режим выбора числа признаков, рассматриваемых при поиске разбиения
     constructor Create(
       nTrees: integer;
       maxDepth: integer;
       minSamplesSplit: integer;
       minSamplesLeaf: integer;
-      maxFeatures: TMaxFeaturesMode);
+      maxFeatures: TMaxFeaturesMode;
+      seed: integer := -1);
 
 /// Обучает ансамбль деревьев на данных X и y.
 /// Для каждого дерева используется bootstrap-подвыборка
@@ -543,22 +546,23 @@ type
 /// Случайный лес для задачи регрессии.
 /// Строит ансамбль регрессионных деревьев,
 /// обученных на bootstrap-подвыборках данных и случайных подмножествах признаков.
-/// Итоговое предсказание — среднее значение по всем деревьям ансамбля.
+/// Итоговое предсказание — среднее значение по всем деревьям ансамбля
   RandomForestRegressor = class(RandomForestBase, IModel)
   private
     fTrees: array of DecisionTreeRegressor;
   public
-/// Создает регрессионный случайный лес.
-/// nTrees — число деревьев в ансамбле.
-/// maxDepth — максимальная глубина деревьев.
-/// minSamplesSplit — минимальное число объектов для разбиения узла.
-/// minSamplesLeaf — минимальное число объектов в листе.
-/// maxFeaturesMode — режим выбора числа признаков, рассматриваемых при поиске разбиения.
+/// Создает регрессионный случайный лес:
+///   • nTrees — число деревьев в ансамбле.
+///   • maxDepth — максимальная глубина деревьев.
+///   • minSamplesSplit — минимальное число объектов для разбиения узла.
+///   • minSamplesLeaf — минимальное число объектов в листе.
+///   • maxFeaturesMode — режим выбора числа признаков, рассматриваемых при поиске разбиения
     constructor Create(nTrees: integer := 100; 
       maxDepth: integer := integer.MaxValue;
       minSamplesSplit: integer := 2; 
       minSamplesLeaf: integer := 1;
-      maxFeaturesMode: TMaxFeaturesMode := TMaxFeaturesMode.HalfFeatures);
+      maxFeaturesMode: TMaxFeaturesMode := TMaxFeaturesMode.HalfFeatures;
+      seed: integer := -1);
 
 /// Обучает случайный лес на данных X и y.
 /// Для каждого дерева используется bootstrap-выборка.
@@ -583,25 +587,26 @@ type
 
 /// Случайный лес для задачи классификации.
 /// Наследуется от RandomForestBase и реализует интерфейс IClassifier.
-/// Строит ансамбль классификационных деревьев, обученных на bootstrap-подвыборках 
-///   объектов и случайных подмножествах признаков.
-/// Итоговое предсказание формируется голосованием деревьев или агрегацией вероятностей классов.
+/// Строит ансамбль классификационных деревьев, обученных на  
+///   bootstrap-подвыборках объектов и случайных подмножествах признаков.
+/// Итоговое предсказание формируется голосованием деревьев или агрегацией вероятностей классов
   RandomForestClassifier = class(RandomForestBase, IClassifier)
   private
     fTrees: array of DecisionTreeClassifier;
   public
-/// Создает классификационный случайный лес.
-/// nTrees — число деревьев в ансамбле.
-/// maxDepth — максимальная глубина каждого дерева.
-/// minSamplesSplit — минимальное число объектов для разбиения узла.
-/// minSamplesLeaf — минимальное число объектов в листе.
-/// maxFeaturesMode — режим выбора числа признаков при поиске разбиения, по умолчанию используется sqrt(p), 
-///   что является стандартом для классификации.
+/// Создает классификационный случайный лес:
+///   • nTrees — число деревьев в ансамбле.
+///   • maxDepth — максимальная глубина каждого дерева.
+///   • minSamplesSplit — минимальное число объектов для разбиения узла.
+///   • minSamplesLeaf — минимальное число объектов в листе.
+///   • maxFeaturesMode — режим выбора числа признаков при поиске разбиения, по умолчанию используется sqrt(p), 
+///     что является стандартом для классификации
     constructor Create(nTrees: integer := 100; 
       maxDepth: integer := integer.MaxValue;
       minSamplesSplit: integer := 2;
       minSamplesLeaf: integer := 1;
-      maxFeaturesMode: TMaxFeaturesMode := TMaxFeaturesMode.SqrtFeatures);
+      maxFeaturesMode: TMaxFeaturesMode := TMaxFeaturesMode.SqrtFeatures;
+      seed: integer := -1);
   
 /// Обучает случайный лес на данных X и y.
 /// Для каждого дерева используется bootstrap-выборка обучающих объектов.
@@ -662,9 +667,12 @@ type
 /// Gradient Boosting Regressor.
 /// Реализует градиентный бустинг над деревьями решений.
 /// Каждая новая модель обучается на псевдо-остатках предыдущей.
-/// Поддерживает разные loss-функции, subsample (stochastic boosting),
-/// early stopping (validation или OOB),
-/// L2-регуляризацию в листьях и staged prediction.
+/// Поддерживает: 
+///   • разные loss-функции, 
+///   • subsample (stochastic boosting),
+///   • early stopping (validation или OOB),
+///   • L2-регуляризацию в листьях 
+///   • staged prediction
   GradientBoostingRegressor = class(IRegressor)
   private
     fNEstimators: integer;
@@ -673,7 +681,6 @@ type
     fMinSamplesSplit: integer;
     fMinSamplesLeaf: integer;
     fSubsample: real;
-    fRandomSeed: integer;
 
     fEstimators: List<DecisionTreeRegressor>;
     fInitValue: real;
@@ -701,6 +708,10 @@ type
     
     fOOBLossHistory: List<real>;
     
+    fRandomSeed: integer;
+    fRng: System.Random;
+    fUserProvidedSeed: boolean;
+    
     function ComputeTrainLoss(y, yPred: Vector): real;
     procedure ComputePseudoResiduals(y, yPred: Vector; r: Vector);
     
@@ -712,20 +723,20 @@ type
     function ComputeTrainLossMasked(yTrue, yPred: Vector; mask: array of boolean): real;
   
   public
-/// Создает новый GradientBoostingRegressor.
-/// nEstimators — число деревьев (итераций бустинга).
-/// learningRate — коэффициент shrinkage.
-/// maxDepth — максимальная глубина дерева.
-/// minSamplesSplit — минимальное число объектов для split.
-/// minSamplesLeaf — минимальное число объектов в листе.
-/// subsample — доля выборки на каждой итерации (0..1].
-/// randomSeed — зерно генератора случайных чисел.
-/// loss — функция потерь.
-/// huberDelta — параметр Huber loss.
-/// earlyStoppingPatience — число итераций без улучшения до остановки.
-/// quantileAlpha — уровень квантили для Quantile loss.
-/// leafL2 — L2-регуляризация значения листа.
-/// useOOBEarlyStopping — использовать OOB loss для ранней остановки.
+/// Создает новый GradientBoostingRegressor:
+///   • nEstimators — число деревьев (итераций бустинга).
+///   • learningRate — коэффициент shrinkage.
+///   • maxDepth — максимальная глубина дерева.
+///   • minSamplesSplit — минимальное число объектов для split.
+///   • minSamplesLeaf — минимальное число объектов в листе.
+///   • subsample — доля выборки на каждой итерации (0..1].
+///   • randomSeed — зерно генератора случайных чисел.
+///   • loss — функция потерь.
+///   • huberDelta — параметр Huber loss.
+///   • earlyStoppingPatience — число итераций без улучшения до остановки.
+///   • quantileAlpha — уровень квантили для Quantile loss.
+///   • leafL2 — L2-регуляризация значения листа.
+///   • useOOBEarlyStopping — использовать OOB loss для ранней остановки
     constructor Create(
       nEstimators: integer := 100;
       learningRate: real := 0.1;
@@ -739,12 +750,12 @@ type
       earlyStoppingPatience: integer := 0;
       quantileAlpha: real := 0.5;
       leafL2: real := 0.0;
-      useOOBEarlyStopping: boolean := false
+      useOOBEarlyStopping: boolean := false; 
+      seed: integer := -1
       );
 
 /// Обучает модель на всей обучающей выборке.
-/// Если включен early stopping и subsample < 1,
-/// может использоваться OOB loss.
+/// Если включен early stopping и subsample < 1, может использоваться OOB loss.
 /// Возвращает обученную модель.
     function Fit(X: Matrix; y: Vector): IModel;
 /// Предсказывает значения целевой переменной.
@@ -797,20 +808,21 @@ type
   
 /// Gradient Boosting Classifier.
 /// Реализует многоклассовый градиентный бустинг с использованием softmax и LogLoss.
-/// На каждой итерации обучается по одному дереву
-///   для каждого класса (one-vs-all в логит-пространстве).
-/// Поддерживает subsample, validation early stopping,
-///   OOB early stopping и staged prediction.  
+/// На каждой итерации обучается по одному дереву для каждого класса (one-vs-all в логит-пространстве).
+/// Поддерживает:
+///   • subsample 
+///   • validation early stopping 
+///   • OOB early stopping
+///   • staged prediction
   GradientBoostingClassifier = class(IProbabilisticClassifier)
   private
     // hyperparams
-    fNEstimators: integer;
+    fNEstimators: integer; 
     fLearningRate: real;
     fMaxDepth: integer;
     fMinSamplesSplit: integer;
     fMinSamplesLeaf: integer;
     fSubsample: real;
-    fRandomSeed: integer;
     fEarlyStoppingPatience: integer;
 
     // fitted state
@@ -836,6 +848,10 @@ type
     fFeatureImportances: Vector;
     
     fOOBLossHistory: List<real>;
+    
+    fRandomSeed: integer;
+    fRng: System.Random;
+    fUserProvidedSeed: boolean;
 
   private
     function FitInternal(XTrain: Matrix; yTrain: Vector; XVal: Matrix; yVal: Vector; useValidation: boolean): IModel;
@@ -852,15 +868,15 @@ type
       mask: array of boolean): real;
   
   public
-/// Создает новый GradientBoostingClassifier.
-/// nEstimators — число итераций бустинга.
-/// learningRate — коэффициент shrinkage.
-/// maxDepth — максимальная глубина деревьев.
-/// minSamplesSplit — минимальное число объектов для split.
-/// minSamplesLeaf — минимальное число объектов в листе.
-/// subsample — доля обучающей выборки на каждой итерации.
-/// randomSeed — зерно генератора случайных чисел.
-/// earlyStoppingPatience — число итераций без улучшения до ранней остановки.
+/// Создает новый GradientBoostingClassifier:
+///   • nEstimators — число итераций бустинга.
+///   • learningRate — коэффициент shrinkage.
+///   • maxDepth — максимальная глубина деревьев.
+///   • minSamplesSplit — минимальное число объектов для split.
+///   • minSamplesLeaf — минимальное число объектов в листе.
+///   • subsample — доля обучающей выборки на каждой итерации.
+///   • seed — зерно генератора случайных чисел.
+///   • earlyStoppingPatience — число итераций без улучшения до ранней остановки
     constructor Create(
       nEstimators: integer := 200;
       learningRate: real := 0.05;
@@ -868,12 +884,11 @@ type
       minSamplesSplit: integer := 2;
       minSamplesLeaf: integer := 1;
       subsample: real := 1.0;
-      randomSeed: integer := 42;
-      earlyStoppingPatience: integer := 20);
+      earlyStoppingPatience: integer := 20;
+      seed: integer := -1);
 
 /// Обучает классификатор на всей обучающей выборке.
-/// Если включен early stopping и subsample < 1,
-/// может использоваться OOB loss.
+/// Если включен early stopping и subsample < 1, то может использоваться OOB loss.
 /// Возвращает обученную модель.
     function Fit(X: Matrix; y: Vector): IModel;
     
@@ -918,36 +933,114 @@ type
 
 /// Нормированные importance признаков.
 /// Рассчитываются как суммарное уменьшение impurity
-/// по всем деревьям и нормируются к 1.
+///   по всем деревьям и нормируются к 1.
     function FeatureImportances: Vector;
     
 /// Возвращает строковое представление модели.
     function ToString: string; override;
   end;
 
+//-----------------------------
+//             KNN
+//-----------------------------
+  
+  Neighbor = record
+    dist: double;
+    idx: integer;
+  end;
+ 
+  KNNWeighting = (Uniform, Distance);
+ 
+  KNNBase = abstract class(IModel)
+  protected
+    // ==== train state ====
+    fXTrain: Matrix;
+    fK: integer;
+    fIsFitted: boolean;
+    
+    fWeighting: KNNWeighting;
+
+    // ==== work buffers ====
+    fNeighbors: array of Neighbor;
+
+    // ==== common methods ====
+    procedure CheckFitted;
+    procedure ValidatePredictInput(X: Matrix);
+
+    function SquaredL2(trainRow: integer; XTest: Matrix; testRow: integer): double;
+
+    procedure QuickSelect(k: integer);
+    function Partition(left, right: integer): integer;
+
+  public
+    constructor Create(k: integer; weighting: KNNWeighting := KNNWeighting.Uniform);
+
+    function Fit(X: Matrix; y: Vector): IModel; virtual; abstract;
+    function Predict(X: Matrix): Vector; virtual; abstract;
+
+    function Clone: IModel; virtual; abstract;
+  end;
+  
+  KNNClassifier = class(KNNBase, IProbabilisticClassifier)
+  private
+    // ==== classification state ====
+    fYEnc: array of integer;
+    fClasses: array of double;
+    fClassCount: integer;
+
+    // ==== voting buffers ====
+    fVotes: array of double;
+    fMark: array of integer;
+    fTouched: array of integer;
+    fEpoch: integer;
+
+    procedure EncodeClasses(y: Vector);
+
+  public
+    constructor Create(k: integer; weighting: KNNWeighting := KNNWeighting.Uniform);
+
+    function Fit(X: Matrix; y: Vector): IModel; override;
+    function Predict(X: Matrix): Vector; override;
+    function PredictProba(X: Matrix): Matrix;
+    function GetClasses: array of double;
+
+    function Clone: IModel; override;
+  end;
+  
+  KNNRegressor = class(KNNBase, IRegressor)
+  private
+    fYTrain: Vector;
+
+  public
+    constructor Create(k: integer; weighting: KNNWeighting := KNNWeighting.Uniform);
+
+    function Fit(X: Matrix; y: Vector): IModel; override;
+    function Predict(X: Matrix): Vector; override;
+    function Clone: IModel; override;
+  end;
 {$endregion Models}
 
 {$region Pipeline}
 /// Последовательный конвейер машинного обучения.
 /// Гарантирует строгий порядок выполнения шагов:
-///     [преобразователи] → [модель].
+///   [преобразователи] → [модель].
 /// 
 /// Поддерживает:
-/// - преобразователи без учёта целевой переменной;
-/// - преобразователи с учётом целевой переменной;
-/// - одну финальную модель.
+///   • преобразователи без учёта целевой переменной;
+///   • преобразователи с учётом целевой переменной;
+///   • одну финальную модель.
 ///
 /// Обеспечивает единый интерфейс Fit / Predict
-/// и воспроизводимость полного процесса обучения.
+/// и воспроизводимость полного процесса обучения
   Pipeline = class(IModel)
   private
     fTransformers: List<ITransformer>;
     fModel: IModel;
     fFitted: boolean;
   public
-    /// Создаёт конвейер машинного обучения для заданной модели.
-    /// model — модель, которая будет обучена
-    /// после последовательного применения всех преобразователей.
+    /// Создаёт конвейер машинного обучения для заданной модели:
+    ///   • model — модель, которая будет обучена
+    ///     после последовательного применения всех преобразователей.
     constructor Create(model: IModel);
     
     /// Создаёт пустой пайплайн (конвейер машинного обучения).
@@ -991,8 +1084,8 @@ type
   
 {$region Transformers}
 /// Стандартизирует признаки: вычитает среднее
-/// и делит на стандартное отклонение по каждому столбцу.
-/// Используется для приведения признаков к сопоставимому масштабу.
+///   и делит на стандартное отклонение по каждому столбцу.
+/// Используется для приведения признаков к сопоставимому масштабу
   StandardScaler = class(ITransformer)
   private
     fMean: Vector;
@@ -1020,8 +1113,8 @@ type
   end;
   
 /// Масштабирует признаки в заданный диапазон
-/// (по умолчанию [0, 1]) на основе минимального и максимального значения каждого столбца.
-/// Используется для приведения признаков к единому масштабу без центрирования.
+///   (по умолчанию [0, 1]) на основе минимального и максимального значения каждого столбца.
+/// Используется для приведения признаков к единому масштабу без центрирования
   MinMaxScaler = class(ITransformer)
   private
     fMin: Vector;
@@ -1031,7 +1124,7 @@ type
     fRangeMax: real;
   public
     /// Создаёт MinMaxScaler с диапазоном [rangeMin, rangeMax].
-    /// По умолчанию масштабирование выполняется к [0, 1].
+    /// По умолчанию масштабирование выполняется к [0, 1]
     constructor Create(rangeMin: real := 0.0; rangeMax: real := 1.0);
     /// Вычисляет минимальные и максимальные значения
     /// по каждому признаку.
@@ -1070,12 +1163,12 @@ type
     fMean: Vector;         // μ
     fFitted: boolean;
   public
-    /// Создаёт PCA-трансформер.
-    /// k — число главных компонент (k > 0).
+    /// Создаёт PCA-трансформер:
+    ///   • k — число главных компонент (k > 0).
     constructor Create(k: integer);
   
     /// Обучает трансформер на матрице признаков X.
-    /// X — матрица m × n.
+    ///   X — матрица m × n.
     function Fit(X: Matrix): ITransformer;
   
     /// Преобразует матрицу X в пространство главных компонент.
@@ -1092,7 +1185,7 @@ type
   
 /// Трансформер, удаляющий признаки с малой дисперсией.
 /// Удаляет столбцы X_j, для которых Var(X_j) < threshold.
-/// Не использует целевую переменную (unsupervised).
+/// Не использует целевую переменную (unsupervised)
   VarianceThreshold = class(ITransformer)
   private
     fThreshold: real;
@@ -1100,7 +1193,7 @@ type
     fFitted: boolean;
   
   public
-    /// threshold — минимальная допустимая дисперсия (>= 0).
+    /// threshold — минимальная допустимая дисперсия (>= 0)
     constructor Create(threshold: real := 0.0);
   
     /// Вычисляет дисперсии признаков и запоминает индексы
@@ -1121,40 +1214,38 @@ type
   end;
   
   /// Тип критерия оценки признаков для SelectKBest.
-  /// Определяет способ вычисления значимости признака
-  /// относительно целевой переменной.
+  /// Определяет способ вычисления значимости признака относительно целевой переменной
   FeatureScore = (
     /// Абсолютное значение коэффициента корреляции Пирсона
     /// между признаком и целевой переменной.
-    /// Подходит для задач регрессии и бинарной классификации при линейной зависимости.
+    /// Подходит для задач регрессии и бинарной классификации при линейной зависимости
     Correlation,
     
     /// F-статистика линейной регрессии (FRegression).
     /// Оценивает статистическую значимость линейной связи
-    /// между признаком и целевой переменной.
+    ///   между признаком и целевой переменной.
     /// Основан на коэффициенте детерминации (R²) и F-статистике.
-    /// Более строгий критерий, чем простая корреляция.
+    /// Более строгий критерий, чем простая корреляция
     FRegression,
     
     /// ANOVA F-критерий.
     /// Используется в задачах классификации.
-    /// Оценивает различие средних значений признака между различными классами.
+    /// Оценивает различие средних значений признака между различными классами
     AnovaF,
     
     /// Хи-квадрат (Chi-Square) критерий независимости.
     /// Используется в задачах классификации.
     /// Оценивает зависимость между признаком и классом
-    /// на основе различия наблюдаемых и ожидаемых частот.
+    ///   на основе различия наблюдаемых и ожидаемых частот.
     /// Предполагает, что значения признака неотрицательны.
-    /// Часто применяется для текстовых данных и частотных представлений (bag-of-words).
+    /// Часто применяется для текстовых данных и частотных представлений (bag-of-words)
     ChiSquare
   );
   
 /// Преобразователь с учётом целевой переменной
 /// Для каждого признака вычисляет score(X_j, y)
-/// и оставляет k признаков с наибольшим значением score.
-/// Может использовать встроенные критерии
-/// или пользовательскую функцию оценки.
+///   и оставляет k признаков с наибольшим значением score.
+/// Может использовать встроенные критерии или пользовательскую функцию оценки
   SelectKBest = class(ISupervisedTransformer)
   private
     fK: integer;
@@ -1169,13 +1260,13 @@ type
     function ComputeAnovaF(feature: Vector; y: Vector): real;
     function ComputeChiSquare(feature: Vector; y: Vector): real;
   public
-    /// Создаёт трансформер с использованием встроенного критерия.
-    /// k — число отбираемых признаков.
-    /// score — тип критерия (например, Correlation).
+    /// Создаёт трансформер с использованием встроенного критерия:
+    ///   • k — число отбираемых признаков.
+    ///   • score — тип критерия (например, Correlation)
     constructor Create(k: integer; score: FeatureScore := FeatureScore.Correlation);
   
-    /// Создаёт трансформер с пользовательской функцией оценки.
-    /// scoreFunc — функция (feature, y) → real.
+    /// Создаёт трансформер с пользовательской функцией оценки:
+    ///   • scoreFunc — функция (feature, y) → real
     constructor Create(k: integer; scoreFunc: (Vector, Vector) -> real);
 
     /// Выбрасывает исключение
@@ -1203,22 +1294,22 @@ type
     function Clone: ITransformer;
   end;
   
-  /// Тип нормы для нормализации строк.
+  /// Тип нормы для нормализации строк
   NormType = (L1, L2);
   
   /// Преобразователь нормализации по строкам.
   /// Для каждой строки X_i выполняет нормализацию:
-  ///   L1:  x := x / ||x||₁
-  ///   L2:  x := x / ||x||₂
+  ///   L1:  x := x / ‖x‖₁
+  ///   L2:  x := x / ‖x‖₂
   /// Используется перед моделями, чувствительными к масштабу
-  /// (LogisticRegression, SVM, L1-регуляризация).
+  /// (LogisticRegression, SVM, L1-регуляризация)
   Normalizer = class(ITransformer)
   private
     fNormType: NormType;
     fFitted: boolean;
   public
-/// Создает нормализатор.
-/// norm — тип нормы, используемой для масштабирования строки признаков.
+/// Создает нормализатор:
+///   • norm — тип нормы, используемой для масштабирования строки признаков.
 /// По умолчанию используется L2-норма.
     constructor Create(norm: NormType := NormType.L2);
   
@@ -1302,8 +1393,13 @@ const
   ER_MAX_DEPTH_INVALID =
     'maxDepth должен быть > 0!!maxDepth must be > 0';
   ER_SUBSAMPLE_INVALID =
-    'subsample должен быть > 0!!subsample must be > 0';    
-    
+    'subsample должен быть > 0!!subsample must be > 0'; 
+  ER_NAN_IN_Y =
+    'y содержит NaN!!y contains NaN';  
+  ER_NAN_IN_X =  
+    'x содержит NaN!!x contains NaN';  
+  ER_K_EXCEEDS_SAMPLES =
+    'k превышает число обучающих объектов!!k exceeds number of training samples';  
     
 {$endregion ErrConstants}  
   
@@ -1973,12 +2069,24 @@ begin
   Result := n;
 end;
 
-constructor DecisionTreeBase.Create(maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer);
+constructor DecisionTreeBase.Create(maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer; seed: integer);
 begin
   fMaxDepth := maxDepth;
   fMinSamplesSplit := minSamplesSplit;
   fMinSamplesLeaf := minSamplesLeaf;
-  fRandomSeed := 0;
+  
+  if seed < 0 then
+  begin
+    fUserProvidedSeed := false;
+    fRandomSeed := System.Environment.TickCount and integer.MaxValue;
+  end
+  else
+  begin
+    fUserProvidedSeed := true;
+    fRandomSeed := seed;
+  end;
+
+  fRng := new System.Random(fRandomSeed);
 end;
 
 procedure DecisionTreeBase.CopyBaseState(dest: DecisionTreeBase);
@@ -1989,6 +2097,9 @@ begin
   dest.fFitted := fFitted;
   dest.fRandomSeed := fRandomSeed;
   dest.fMaxFeatures := fMaxFeatures;
+  
+  dest.fUserProvidedSeed := fUserProvidedSeed;
+  dest.fRng := new System.Random(fRandomSeed);
 
   if fCriterion <> nil then
     dest.fCriterion := fCriterion; // можно так, если критерий stateless
@@ -2018,7 +2129,7 @@ begin
 
   for var k := 0 to fMaxFeatures-1 do
   begin
-    var idx := Random(all.Count);
+    var idx := fRng.Next(all.Count);
     subset[k] := all[idx];
     all.RemoveAt(idx);
   end;
@@ -2350,7 +2461,7 @@ begin
 
     for var i := 0 to fMaxFeatures-1 do
     begin
-      var r := i + Random(p - i);
+      var r := i + fRng.Next(p - i);
       var tmp := feat[i];
       feat[i] := feat[r];
       feat[r] := tmp;
@@ -2406,28 +2517,9 @@ begin
   Result := bestClass;
 end;
 
-{function DecisionTreeClassifier.Gini(y: Vector; indices: array of integer): real;
+constructor DecisionTreeClassifier.Create(maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer; seed: integer);
 begin
-  var counts := new integer[fClassCount];
-
-  foreach var i in indices do
-    counts[integer(y[i])] += 1;
-
-  var n := indices.Length;
-  var sum := 0.0;
-
-  for var c := 0 to fClassCount - 1 do
-  begin
-    var p := counts[c] / n;
-    sum += p * p;
-  end;
-
-  Result := 1.0 - sum;
-end;}
-
-constructor DecisionTreeClassifier.Create(maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer);
-begin
-  inherited Create(maxDepth, minSamplesSplit, minSamplesLeaf);
+  inherited Create(maxDepth, minSamplesSplit, minSamplesLeaf, seed);
   fCriterion := new GiniCriterion;
 end;
 
@@ -2438,9 +2530,6 @@ begin
 
   if X.Rows = 0 then
     ArgumentError(ER_EMPTY_DATASET);
-  
-  if fRandomSeed <> 0 then
-    Randomize(fRandomSeed);
   
   fFeatureImportances := new Vector(X.Cols);
 
@@ -2561,9 +2650,9 @@ end;
 // DecisionTreeRegressor
 
 constructor DecisionTreeRegressor.Create(maxDepth: integer; minSamplesSplit: integer; 
-  minSamplesLeaf: integer; leafL2: real);
+  minSamplesLeaf: integer; leafL2: real; seed: integer);
 begin
-  inherited Create(maxDepth, minSamplesSplit, minSamplesLeaf);
+  inherited Create(maxDepth, minSamplesSplit, minSamplesLeaf, seed);
   fCriterion := new VarianceCriterion;
   fLeafL2 := leafL2;
 end;
@@ -2603,9 +2692,6 @@ begin
 
   if X.Rows = 0 then
     ArgumentError(ER_EMPTY_DATASET);
-  
-  if fRandomSeed <> 0 then
-    Randomize(fRandomSeed);
   
   fFeatureImportances := new Vector(X.Cols);
 
@@ -2701,7 +2787,8 @@ constructor RandomForestBase.Create(
   maxDepth: integer;
   minSamplesSplit: integer;
   minSamplesLeaf: integer;
-  maxFeatures: TMaxFeaturesMode);
+  maxFeatures: TMaxFeaturesMode;
+  seed: integer);
 begin
   fNTrees := nTrees;
   fMaxDepth := maxDepth;
@@ -2709,6 +2796,19 @@ begin
   fMinSamplesLeaf := minSamplesLeaf;
   fMaxFeaturesMode := maxFeatures;
   fFitted := false;
+  
+  if seed < 0 then
+  begin
+    fUserProvidedSeed := false;
+    fRandomSeed := System.Environment.TickCount and integer.MaxValue;
+  end
+  else
+  begin
+    fUserProvidedSeed := true;
+    fRandomSeed := seed;
+  end;
+
+  fRng := new System.Random(fRandomSeed);
 end;
 
 function RandomForestBase.ComputeMaxFeatures(p: integer): integer;
@@ -2732,7 +2832,7 @@ begin
 
   for var i := 0 to n - 1 do
   begin
-    var idx := Random(n);
+    var idx := fRng.Next(n);
 
     for var j := 0 to p - 1 do
       Xb[i,j] := X[idx,j];
@@ -2747,9 +2847,9 @@ end;
 
 constructor RandomForestRegressor.Create(nTrees: integer; maxDepth: integer;
   minSamplesSplit: integer; minSamplesLeaf: integer;
-  maxFeaturesMode: TMaxFeaturesMode);
+  maxFeaturesMode: TMaxFeaturesMode; seed: integer);
 begin
-  inherited Create(nTrees,maxDepth,minSamplesSplit,minSamplesLeaf,maxFeaturesMode)
+  inherited Create(nTrees,maxDepth,minSamplesSplit,minSamplesLeaf,maxFeaturesMode,seed)
 end;
 
 function RandomForestRegressor.Fit(X: Matrix; y: Vector): IModel;
@@ -2769,10 +2869,13 @@ begin
 
     BootstrapSample(X, y, Xb, yb);
 
+    var treeSeed := fRng.Next(integer.MaxValue);
+    
     var tree := new DecisionTreeRegressor(
       fMaxDepth,
       fMinSamplesSplit,
-      fMinSamplesLeaf
+      fMinSamplesLeaf,
+      treeSeed
     );
     
     var p := X.Cols;
@@ -2814,9 +2917,12 @@ begin
     fNTrees,
     fMaxDepth,
     fMinSamplesSplit,
-    fMinSamplesLeaf
+    fMinSamplesLeaf,
+    fMaxFeaturesMode,
+    fRandomSeed
   );
 
+  rf.fUserProvidedSeed := fUserProvidedSeed;
   rf.fFitted := fFitted;
 
   SetLength(rf.fTrees, fTrees.Length);
@@ -2848,6 +2954,12 @@ begin
     if fMaxDepth = integer.MaxValue then '∞'
     else fMaxDepth.ToString;
 
+  var seedPart :=
+    if fUserProvidedSeed then
+      $', seed={fRandomSeed}'
+    else
+      '';
+
   Result :=
     $'RandomForestRegressor(' +
     $'nTrees={fNTrees}, ' +
@@ -2855,6 +2967,7 @@ begin
     $'minSamplesSplit={fMinSamplesSplit}, ' +
     $'minSamplesLeaf={fMinSamplesLeaf}, ' +
     $'maxFeatures={fMaxFeaturesMode}' +
+    seedPart +
     ')';
 end;
 
@@ -2864,9 +2977,9 @@ end;
 
 constructor RandomForestClassifier.Create(nTrees: integer; 
   maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer;
-  maxFeaturesMode: TMaxFeaturesMode);
+  maxFeaturesMode: TMaxFeaturesMode; seed: integer);
 begin
-  inherited Create(nTrees,maxDepth,minSamplesSplit,minSamplesLeaf,maxFeaturesMode);
+  inherited Create(nTrees,maxDepth,minSamplesSplit,minSamplesLeaf,maxFeaturesMode,seed);
 end;
 
 function RandomForestClassifier.Fit(X: Matrix; y: Vector): IModel;
@@ -2888,10 +3001,13 @@ begin
     
     BootstrapSample(X, y, Xb, yb);
 
+    var treeSeed := fRng.Next(integer.MaxValue);
+
     var tree := new DecisionTreeClassifier(
       fMaxDepth,
       fMinSamplesSplit,
-      fMinSamplesLeaf
+      fMinSamplesLeaf,
+      treeSeed
     );
     
     var m := ComputeMaxFeatures(p);
@@ -2957,9 +3073,12 @@ begin
     fNTrees,
     fMaxDepth,
     fMinSamplesSplit,
-    fMinSamplesLeaf
+    fMinSamplesLeaf,
+    fMaxFeaturesMode,
+    fRandomSeed
   );
 
+  rf.fUserProvidedSeed := fUserProvidedSeed;
   rf.fFitted := fFitted;
 
   SetLength(rf.fTrees, fTrees.Length);
@@ -2992,6 +3111,12 @@ begin
     if fMaxDepth = integer.MaxValue then '∞'
     else fMaxDepth.ToString;
 
+  var seedPart :=
+    if fUserProvidedSeed then
+      $', seed={fRandomSeed}'
+    else
+      '';
+
   Result :=
     $'RandomForestClassifier(' +
     $'nTrees={fNTrees}, ' +
@@ -2999,6 +3124,7 @@ begin
     $'minSamplesSplit={fMinSamplesSplit}, ' +
     $'minSamplesLeaf={fMinSamplesLeaf}, ' +
     $'maxFeatures={fMaxFeaturesMode}' +
+    seedPart +
     ')';
 end;
 
@@ -3018,7 +3144,8 @@ constructor GradientBoostingRegressor.Create(
   earlyStoppingPatience: integer;
   quantileAlpha: real;
   leafL2: real;
-  useOOBEarlyStopping: boolean);
+  useOOBEarlyStopping: boolean;
+  seed: integer);
 begin
   if nEstimators <= 0 then
     ArgumentOutOfRangeError(ER_N_ESTIMATORS_NOT_POSITIVE);
@@ -3039,6 +3166,19 @@ begin
 
   fEstimators := new List<DecisionTreeRegressor>;
   fFitted := false;
+  
+  if seed < 0 then
+  begin
+    fUserProvidedSeed := false;
+    fRandomSeed := System.Environment.TickCount and integer.MaxValue;
+  end
+  else
+  begin
+    fUserProvidedSeed := true;
+    fRandomSeed := seed;
+  end;
+
+  fRng := new System.Random(fRandomSeed);
   
 // -------------  
   if huberDelta <= 0 then
@@ -3304,8 +3444,6 @@ begin
       yPredVal[i] := fInitValue;
   end;
 
-  Randomize(fRandomSeed);
-
   // --- boosting loop ---
   for var m := 0 to fNEstimators - 1 do
   begin
@@ -3313,11 +3451,14 @@ begin
     var r := new Vector(nTrain);
     ComputePseudoResiduals(yTrain, yPredTrain, r);
 
+    var stageSeed := fRng.Next(integer.MaxValue);
+    
     var tree := new DecisionTreeRegressor(
       fMaxDepth,
       fMinSamplesSplit,
       fMinSamplesLeaf,
-      fLeafL2
+      fLeafL2,
+      stageSeed
     );
 
     // --- subsample rows (and keep indices) ---
@@ -3331,7 +3472,7 @@ begin
 
       rows := new integer[k];
       for var i := 0 to k - 1 do
-        rows[i] := Random(nTrain);
+        rows[i] := fRng.Next(nTrain);
 
       tree.SetRowIndices(rows);
 
@@ -3588,6 +3729,9 @@ begin
   if fUseOOBEarlyStopping then
     s += ', OOB=true';
 
+  if fUserProvidedSeed then
+    s += $', seed={fRandomSeed}';
+
   s += ')';
 
   Result := s;
@@ -3602,12 +3746,42 @@ begin
     fMinSamplesSplit,
     fMinSamplesLeaf,
     fSubsample,
-    fRandomSeed);
+    fRandomSeed
+  );
 
+  // --- seed policy ---
+  copy.fUserProvidedSeed := fUserProvidedSeed;
+
+  // --- basic state ---
   copy.fInitValue := fInitValue;
   copy.fFeatureCount := fFeatureCount;
   copy.fFitted := fFitted;
 
+  // --- best iteration state ---
+  copy.fBestIteration := fBestIteration;
+  copy.fBestTrainLoss := fBestTrainLoss;
+  copy.fBestValLoss := fBestValLoss;
+
+  // --- loss configuration ---
+  copy.fLoss := fLoss;
+  copy.fHuberDelta := fHuberDelta;
+  copy.fQuantileAlpha := fQuantileAlpha;
+  copy.fLeafL2 := fLeafL2;
+  copy.fEarlyStoppingPatience := fEarlyStoppingPatience;
+  copy.fUseOOBEarlyStopping := fUseOOBEarlyStopping;
+
+  // --- deep copy histories ---
+  copy.fTrainLossHistory.Clear;
+  copy.fTrainLossHistory.AddRange(fTrainLossHistory);
+
+  copy.fValLossHistory.Clear;
+  copy.fValLossHistory.AddRange(fValLossHistory);
+
+  copy.fOOBLossHistory.Clear;
+  copy.fOOBLossHistory.AddRange(fOOBLossHistory);
+
+  // --- deep copy trees ---
+  copy.fEstimators.Clear;
   foreach var tree in fEstimators do
     copy.fEstimators.Add(tree.Clone as DecisionTreeRegressor);
 
@@ -3727,9 +3901,6 @@ begin
         logitsVal[i, cls] := fInitLogits[cls];
   end;
 
-  // --- RNG
-  Randomize(fRandomSeed);
-
   var noImprove := 0;
 
   // --- boosting loop
@@ -3765,7 +3936,7 @@ begin
     
       SetLength(subIndices, subCount);
       for var i := 0 to subCount - 1 do
-        subIndices[i] := Random(nTrain);
+        subIndices[i] := fRng.Next(nTrain);
     end;
     
     // inBag
@@ -3795,11 +3966,14 @@ begin
       var rvec := new Vector(nTrain);
       for var i := 0 to nTrain - 1 do
         rvec[i] := residuals[i, cls];
+      
+      var stageSeed := fRng.Next(integer.MaxValue);
 
       var tree := new DecisionTreeRegressor(
         fMaxDepth,
         fMinSamplesSplit,
-        fMinSamplesLeaf
+        fMinSamplesLeaf,
+        seed := stageSeed
       );
       
       // добавление. Тренировка по идее будет происходить по строкам в subIndices
@@ -4058,8 +4232,8 @@ constructor GradientBoostingClassifier.Create(
   minSamplesSplit: integer;
   minSamplesLeaf: integer;
   subsample: real;
-  randomSeed: integer;
-  earlyStoppingPatience: integer);
+  earlyStoppingPatience: integer;
+  seed: integer);
 begin
   if nEstimators <= 0 then
     ArgumentError(ER_N_ESTIMATORS_INVALID);
@@ -4079,7 +4253,6 @@ begin
   fMinSamplesSplit := minSamplesSplit;
   fMinSamplesLeaf := minSamplesLeaf;
   fSubsample := subsample;
-  fRandomSeed := randomSeed;
   fEarlyStoppingPatience := earlyStoppingPatience;
 
   fEstimators := new List<array of DecisionTreeRegressor>;
@@ -4094,8 +4267,20 @@ begin
   fBestValLoss := real.PositiveInfinity;
   
   fOOBLossHistory := new List<real>;
-end;
+  
+  if seed < 0 then
+  begin
+    fUserProvidedSeed := False;
+    fRandomSeed := System.Environment.TickCount and integer.MaxValue;
+  end
+  else
+  begin
+    fUserProvidedSeed := True;
+    fRandomSeed := seed;
+  end;
 
+  fRng := new System.Random(fRandomSeed);
+end;
 
 function GradientBoostingClassifier.PredictProba(X: Matrix): Matrix;
 begin
@@ -4264,6 +4449,9 @@ begin
   if fEarlyStoppingPatience > 0 then
     s += $', earlyStop={fEarlyStoppingPatience}';
 
+  if fUserProvidedSeed then
+    s += $', seed={fRandomSeed}';
+
   s += ')';
 
   Result := s;
@@ -4278,16 +4466,19 @@ begin
     fMinSamplesSplit,
     fMinSamplesLeaf,
     fSubsample,
-    fRandomSeed,
-    fEarlyStoppingPatience
+    fEarlyStoppingPatience,
+    fRandomSeed
   );
 
-  // --- fitted state
+  // --- seed policy ---
+  model.fUserProvidedSeed := fUserProvidedSeed;
+
+  // --- fitted state ---
   model.fFitted := fFitted;
   model.fFeatureCount := fFeatureCount;
   model.fClassCount := fClassCount;
 
-  // --- classes
+  // --- classes ---
   if fClasses <> nil then
   begin
     SetLength(model.fClasses, Length(fClasses));
@@ -4302,7 +4493,7 @@ begin
       model.fClassIndex.Add(kv.Key, kv.Value);
   end;
 
-  // --- estimators (deep copy)
+  // --- estimators (deep copy) ---
   foreach var trees in fEstimators do
   begin
     var newTrees := new DecisionTreeRegressor[Length(trees)];
@@ -4313,12 +4504,15 @@ begin
     model.fEstimators.Add(newTrees);
   end;
 
-  // --- history
+  // --- histories ---
   foreach var v in fTrainLossHistory do
     model.fTrainLossHistory.Add(v);
 
   foreach var v in fValLossHistory do
     model.fValLossHistory.Add(v);
+
+  foreach var v in fOOBLossHistory do
+    model.fOOBLossHistory.Add(v);
 
   model.fBestIteration := fBestIteration;
   model.fBestValLoss := fBestValLoss;
@@ -4367,12 +4561,546 @@ begin
   end;
 end;
 
+//-----------------------------
+//          KNNBase 
+//-----------------------------
 
+constructor KNNBase.Create(k: integer; weighting: KNNWeighting);
+begin
+  if k < 1 then
+    ArgumentOutOfRangeError(ER_K_MUST_BE_POSITIVE);
+
+  fK := k;
+  fWeighting := weighting;
+  fIsFitted := False;
+end;
+
+procedure KNNBase.CheckFitted;
+begin
+  if not fIsFitted then
+    NotFittedError(ER_FIT_NOT_CALLED);
+end;
+
+procedure KNNBase.ValidatePredictInput(X: Matrix);
+begin
+  if X.ColCount <> fXTrain.ColCount then
+    DimensionError(ER_FEATURE_COUNT_MISMATCH);
+end;
+
+function KNNBase.SquaredL2(trainRow: integer; XTest: Matrix; testRow: integer): double;
+begin
+  var sum := 0.0;
+  var d := fXTrain.ColCount;
+
+  for var j := 0 to d - 1 do
+  begin
+    var diff := fXTrain[trainRow, j] - XTest[testRow, j];
+    sum += diff * diff;
+  end;
+
+  exit(sum);
+end;
+
+// QuickSelect(fK - 1); - так вызываем
+
+procedure KNNBase.QuickSelect(k: integer);
+begin
+  var left := 0;
+  var right := fNeighbors.Length - 1;
+
+  while true do
+  begin
+    var pivotIndex := Partition(left, right);
+
+    if pivotIndex = k then
+      exit
+    else if pivotIndex > k then
+      right := pivotIndex - 1
+    else
+      left := pivotIndex + 1;
+  end;
+end;
+
+function KNNBase.Partition(left, right: integer): integer;
+begin
+  var pivot := fNeighbors[(left + right) div 2].dist;
+
+  var i := left;
+  var j := right;
+
+  while true do
+  begin
+    while fNeighbors[i].dist < pivot do i += 1;
+    while fNeighbors[j].dist > pivot do j -= 1;
+
+    if i >= j then
+      exit(j);
+
+    Swap(fNeighbors[i], fNeighbors[j]);
+    
+    i += 1;
+    j -= 1;
+  end;
+end;
+
+//-----------------------------
+//        KNNClassifier 
+//-----------------------------
+
+constructor KNNClassifier.Create(k: integer; weighting: KNNWeighting);
+begin
+  inherited Create(k, weighting);
+end;
+
+procedure KNNClassifier.EncodeClasses(y: Vector);
+begin
+  var n := y.Length;
+
+  // собрать уникальные значения
+  var hs := new HashSet<double>;
+  for var i := 0 to n - 1 do
+  begin
+    var v := y[i];
+    if double.IsNaN(v) then
+      ArgumentError(ER_NAN_IN_Y);
+    hs.Add(v);
+  end;
+
+  fClasses := hs.ToArray;
+  &Array.Sort(fClasses);
+
+  fClassCount := fClasses.Length;
+
+  // построить map label -> index
+  var dict := new Dictionary<double, integer>;
+  for var i := 0 to fClassCount - 1 do
+    dict[fClasses[i]] := i;
+
+  SetLength(fYEnc, n);
+
+  for var i := 0 to n - 1 do
+    fYEnc[i] := dict[y[i]];
+end;
+
+function KNNClassifier.Fit(X: Matrix; y: Vector): IModel;
+begin
+  if X = nil then
+    ArgumentNullError(ER_X_NULL);
+
+  if y = nil then
+    ArgumentNullError(ER_Y_NULL);
+
+  if X.RowCount <> y.Length then
+    DimensionError(ER_XY_SIZE_MISMATCH);
+
+  if fK > X.RowCount then
+    ArgumentOutOfRangeError(ER_K_EXCEEDS_SAMPLES);
+
+  // проверить NaN в X
+  for var i := 0 to X.RowCount - 1 do
+    for var j := 0 to X.ColCount - 1 do
+      if double.IsNaN(X[i,j]) then
+        ArgumentError(ER_NAN_IN_X);
+
+  // копия train data
+  fXTrain := X.Clone;  // предполагаем, что Clone делает глубокую копию
+
+  // кодирование классов
+  EncodeClasses(y);
+
+  var n := fXTrain.RowCount;
+  var C := fClassCount;
+
+  // выделение буферов
+  SetLength(fNeighbors, n);
+
+  SetLength(fVotes, C);
+  SetLength(fMark, C);
+  SetLength(fTouched, C);
+  fEpoch := 0;
+
+  fIsFitted := true;
+
+  exit(self);
+end;
+
+function KNNClassifier.GetClasses: array of double;
+begin
+  Result := fClasses;
+end;
+
+function KNNClassifier.Clone: IModel;
+begin
+  var clone := new KNNClassifier(fK, fWeighting);
+
+  if fIsFitted then
+  begin
+    clone.fXTrain := fXTrain.Clone;
+    clone.fClasses := fClasses.Clone as array of double;
+    clone.fYEnc := fYEnc.Clone as array of integer;
+
+    clone.fClassCount := fClassCount;
+
+    SetLength(clone.fNeighbors, fNeighbors.Length);
+    SetLength(clone.fVotes, fVotes.Length);
+    SetLength(clone.fMark, fMark.Length);
+    SetLength(clone.fTouched, fTouched.Length);
+
+    clone.fEpoch := 0;
+    clone.fIsFitted := true;
+  end;
+
+  Result := clone;
+end;
+
+function KNNClassifier.Predict(X: Matrix): Vector;
+begin
+  if not fIsFitted then
+    NotFittedError(ER_FIT_NOT_CALLED);
+
+  if X = nil then
+    ArgumentNullError(ER_X_NULL);
+
+  ValidatePredictInput(X);
+
+  var m := X.RowCount;
+  var n := fXTrain.RowCount;
+
+  Result := new Vector(m);
+
+  for var i := 0 to m - 1 do
+  begin
+    // заполнить расстояния
+    for var t := 0 to n - 1 do
+    begin
+      fNeighbors[t].dist := SquaredL2(t, X, i);
+      fNeighbors[t].idx := t;
+    end;
+
+    // выбрать k ближайших
+    QuickSelect(fK - 1);
+
+    // exact match: если среди k ближайших есть dist=0, возвращаем его класс
+    var exactCls := -1;
+    for var t := 0 to fK - 1 do
+      if fNeighbors[t].dist = 0 then
+      begin
+        exactCls := fYEnc[fNeighbors[t].idx];
+        break;
+      end;
+
+    if exactCls <> -1 then
+    begin
+      Result[i] := fClasses[exactCls];
+      continue;
+    end;
+
+    // voting (stamping)
+    fEpoch += 1;
+    var touchCount := 0;
+
+    if fWeighting = Uniform then
+    begin
+      for var t := 0 to fK - 1 do
+      begin
+        var trainIdx := fNeighbors[t].idx;
+        var cls := fYEnc[trainIdx];
+
+        if fMark[cls] <> fEpoch then
+        begin
+          fMark[cls] := fEpoch;
+          fVotes[cls] := 0.0;
+          fTouched[touchCount] := cls;
+          touchCount += 1;
+        end;
+
+        fVotes[cls] += 1.0;
+      end;
+    end
+    else
+    begin
+      // weighted: веса 1 / dist (dist = squared distance)
+      for var t := 0 to fK - 1 do
+      begin
+        var trainIdx := fNeighbors[t].idx;
+        var cls := fYEnc[trainIdx];
+        var dist := fNeighbors[t].dist;
+
+        if fMark[cls] <> fEpoch then
+        begin
+          fMark[cls] := fEpoch;
+          fVotes[cls] := 0.0;
+          fTouched[touchCount] := cls;
+          touchCount += 1;
+        end;
+
+        var w := 1.0 / dist;
+        fVotes[cls] += w;
+      end;
+    end;
+
+    // argmax только по touched
+    var bestCls := fTouched[0];
+    var bestVotes := fVotes[bestCls];
+
+    for var k2 := 1 to touchCount - 1 do
+    begin
+      var cls := fTouched[k2];
+      var v := fVotes[cls];
+
+      if (v > bestVotes) or ((v = bestVotes) and (cls < bestCls)) then
+      begin
+        bestCls := cls;
+        bestVotes := v;
+      end;
+    end;
+
+    Result[i] := fClasses[bestCls];
+  end;
+end;
+
+function KNNClassifier.PredictProba(X: Matrix): Matrix;
+begin
+  if not fIsFitted then
+    NotFittedError(ER_FIT_NOT_CALLED);
+
+  if X = nil then
+    ArgumentNullError(ER_X_NULL);
+
+  ValidatePredictInput(X);
+
+  var m := X.RowCount;
+  var n := fXTrain.RowCount;
+
+  Result := new Matrix(m, fClassCount); // предполагаем нулевую инициализацию
+
+  for var i := 0 to m - 1 do
+  begin
+    // заполнить расстояния
+    for var t := 0 to n - 1 do
+    begin
+      fNeighbors[t].dist := SquaredL2(t, X, i);
+      fNeighbors[t].idx := t;
+    end;
+
+    // выбрать k ближайших
+    QuickSelect(fK - 1);
+
+    // exact match: если среди k ближайших есть dist=0, вероятность 1 у его класса
+    var exactCls := -1;
+    for var t := 0 to fK - 1 do
+      if fNeighbors[t].dist = 0 then
+      begin
+        exactCls := fYEnc[fNeighbors[t].idx];
+        break;
+      end;
+
+    if exactCls <> -1 then
+    begin
+      Result[i, exactCls] := 1.0;
+      continue;
+    end;
+
+    // voting (stamping)
+    fEpoch += 1;
+    var touchCount := 0;
+
+    if fWeighting = Uniform then
+    begin
+      for var t := 0 to fK - 1 do
+      begin
+        var trainIdx := fNeighbors[t].idx;
+        var cls := fYEnc[trainIdx];
+
+        if fMark[cls] <> fEpoch then
+        begin
+          fMark[cls] := fEpoch;
+          fVotes[cls] := 0.0;
+          fTouched[touchCount] := cls;
+          touchCount += 1;
+        end;
+
+        fVotes[cls] += 1.0;
+      end;
+
+      // нормализация: сумма = k
+      for var k2 := 0 to touchCount - 1 do
+      begin
+        var cls := fTouched[k2];
+        Result[i, cls] := fVotes[cls] / fK;
+      end;
+    end
+    else
+    begin
+      var sumW := 0.0;
+
+      for var t := 0 to fK - 1 do
+      begin
+        var trainIdx := fNeighbors[t].idx;
+        var cls := fYEnc[trainIdx];
+        var dist := fNeighbors[t].dist;
+
+        if fMark[cls] <> fEpoch then
+        begin
+          fMark[cls] := fEpoch;
+          fVotes[cls] := 0.0;
+          fTouched[touchCount] := cls;
+          touchCount += 1;
+        end;
+
+        var w := 1.0 / dist;
+        fVotes[cls] += w;
+        sumW += w;
+      end;
+
+      // нормализация: сумма = sumW
+      for var k2 := 0 to touchCount - 1 do
+      begin
+        var cls := fTouched[k2];
+        Result[i, cls] := fVotes[cls] / sumW;
+      end;
+    end;
+  end;
+end;
+
+//-----------------------------
+//        KNNRegressor 
+//-----------------------------
+
+constructor KNNRegressor.Create(k: integer; weighting: KNNWeighting);
+begin
+  inherited Create(k, weighting);
+end;
+
+function KNNRegressor.Fit(X: Matrix; y: Vector): IModel;
+begin
+  if X = nil then
+    ArgumentNullError(ER_X_NULL);
+
+  if y = nil then
+    ArgumentNullError(ER_Y_NULL);
+
+  if X.RowCount <> y.Length then
+    DimensionError(ER_XY_SIZE_MISMATCH);
+
+  if fK > X.RowCount then
+    ArgumentOutOfRangeError(ER_K_EXCEEDS_SAMPLES);
+
+  // Проверка NaN в X
+  for var i := 0 to X.RowCount - 1 do
+    for var j := 0 to X.ColCount - 1 do
+      if double.IsNaN(X[i,j]) then
+        ArgumentError(ER_NAN_IN_X);
+
+  // Проверка NaN в y
+  for var i := 0 to y.Length - 1 do
+    if double.IsNaN(y[i]) then
+      ArgumentError(ER_NAN_IN_Y);
+
+  fXTrain := X.Clone;
+  fYTrain := y.Clone;
+
+  var n := fXTrain.RowCount;
+  SetLength(fNeighbors, n);
+
+  fIsFitted := True;
+
+  Result := Self;
+end;
+
+function KNNRegressor.Predict(X: Matrix): Vector;
+begin
+  if not fIsFitted then
+    NotFittedError(ER_FIT_NOT_CALLED);
+
+  if X = nil then
+    ArgumentNullError(ER_X_NULL);
+
+  ValidatePredictInput(X);
+
+  var m := X.RowCount;
+  var n := fXTrain.RowCount;
+
+  Result := new Vector(m);
+
+  for var i := 0 to m - 1 do
+  begin
+    // заполнить расстояния
+    for var t := 0 to n - 1 do
+    begin
+      fNeighbors[t].dist := SquaredL2(t, X, i);
+      fNeighbors[t].idx := t;
+    end;
+
+    // выбрать k ближайших (первые k элементов, порядок произвольный)
+    QuickSelect(fK - 1);
+
+    // exact match: ищем dist=0 среди k ближайших
+    var exactIdx := -1;
+    for var t := 0 to fK - 1 do
+      if fNeighbors[t].dist = 0 then
+      begin
+        exactIdx := fNeighbors[t].idx;
+        break;
+      end;
+
+    if exactIdx <> -1 then
+    begin
+      Result[i] := fYTrain[exactIdx];
+      continue;
+    end;
+
+    if fWeighting = KNNWeighting.Uniform then
+    begin
+      // среднее по k
+      var sum := 0.0;
+      for var t := 0 to fK - 1 do
+        sum += fYTrain[fNeighbors[t].idx];
+
+      Result[i] := sum / fK;
+    end
+    else
+    begin
+      // weighted: веса 1 / dist (dist = squared distance)
+      var sumW := 0.0;
+      var sumWY := 0.0;
+
+      for var t := 0 to fK - 1 do
+      begin
+        var idx := fNeighbors[t].idx;
+        var dist := fNeighbors[t].dist;
+
+        // dist=0 здесь уже не встречается из-за exact-match выше
+        var w := 1.0 / dist;
+        sumW += w;
+        sumWY += w * fYTrain[idx];
+      end;
+
+      Result[i] := sumWY / sumW;
+    end;
+  end;
+end;
+
+function KNNRegressor.Clone: IModel;
+begin
+  var clone := new KNNRegressor(fK, fWeighting);
+
+  if fIsFitted then
+  begin
+    clone.fXTrain := fXTrain.Clone;
+    clone.fYTrain := fYTrain.Clone;
+
+    SetLength(clone.fNeighbors, fNeighbors.Length);
+
+    clone.fIsFitted := True;
+  end;
+
+  Result := clone;
+end;
 
 //-----------------------------
 //          Pipeline 
 //-----------------------------
-
 
 constructor Pipeline.Create;
 begin
