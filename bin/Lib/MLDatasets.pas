@@ -18,20 +18,20 @@ type
   /// Предоставляет удобные методы для получения матриц признаков
   /// и целевых значений для обучения моделей
   Dataset = class
-  private    
-   function ValueLabel(feature, value: string): string;
-   function CloneMeta(df: DataFrame): Dataset;
+  private
+    function ValueLabel(feature, value: string): string;
+    function CloneMeta(df: DataFrame): Dataset;
   public
-    Name: string;
-    Data: DataFrame;
-    Features: array of string;
-    Target: string;
-    Task: TaskType;
-    
     FeatureLabels: Dictionary<string,string>;
     ValueLabels: Dictionary<string,Dictionary<string,string>>;
     Description: string;
 
+    auto property Name: string;
+    auto property Data: DataFrame;
+    auto property Features: array of string;
+    auto property Target: string;
+    auto property Task: TaskType;
+    
     /// Возвращает true, если датасет относится к задаче с учителем
     /// (classification или regression).
     function IsSupervised: boolean;
@@ -1303,26 +1303,31 @@ end;
 
 static function Datasets.StudentExam: Dataset;
 begin
+  NotImplementedError(ER_NOT_IMPLEMENTED, 'Datasets.StudentExam');
   Result := nil;
 end;
 
 static function Datasets.BankClients: Dataset;
 begin
+  NotImplementedError(ER_NOT_IMPLEMENTED, 'Datasets.BankClients');
   Result := nil;
 end;
 
 static function Datasets.TaxiTrips: Dataset;
 begin
+  NotImplementedError(ER_NOT_IMPLEMENTED, 'Datasets.TaxiTrips');
   Result := nil;
 end;
 
 static function Datasets.MoscowTransport: Dataset;
 begin
+  NotImplementedError(ER_NOT_IMPLEMENTED, 'Datasets.MoscowTransport');
   Result := nil;
 end;
 
 static function Datasets.OnlineShopping: Dataset;
 begin
+  NotImplementedError(ER_NOT_IMPLEMENTED, 'Datasets.OnlineShopping');
   Result := nil;
 end;
 
