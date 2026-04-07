@@ -5,13 +5,6 @@ interface
 uses DataFrameABC;
 uses LinearAlgebraML;
 
-/// Преобразует вектор меток классов в массив целых чисел.
-/// Используется при визуализации и других задачах,
-///   где метки должны быть представлены как 0,1,2,...
-/// Значения округляются функцией Round, чтобы устранить
-///   возможные небольшие численные ошибки 
-function LabelsToInts(y: Vector): array of integer;
-
 /// Кодирует строковые метки классов в целочисленные индексы.
 /// Каждому уникальному значению присваивается номер 0,1,2,...
 /// Порядок кодирования соответствует порядку первого появления меток.
@@ -65,14 +58,6 @@ const
   ER_LABEL_INDEX_OUT_OF_RANGE =
     'Индекс метки {0} вне диапазона [0, {1})!!Label index {0} is out of range [0, {1})';
   
-function LabelsToInts(y: Vector): array of integer;
-begin
-  if y = nil then
-    ArgumentNullError(ER_ARG_NULL, 'y');
-
-  Result := ArrGen(y.Length, i -> Round(y[i]));
-end;
-
 function EncodeLabels(labels: array of string; var classes: array of string): array of integer;
 begin
   if labels = nil then

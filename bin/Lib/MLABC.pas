@@ -17,6 +17,7 @@ uses InspectionML;
 uses MLPipelineABC;
 uses MLDatasets;
 uses DataAdapters;
+uses MLUtilsABC;
 
 type 
   Vector = LinearAlgebraML.Vector;
@@ -121,7 +122,7 @@ implementation
 
 function LabelsToInts(y: Vector): array of integer;
 begin
-  Result := DataAdapters.LabelsToInts(y);
+  Result := MLUtilsABC.LabelsToInts(y);
 end;
 
 function EncodeLabels(labels: array of string): array of integer := DataAdapters.EncodeLabels(labels);

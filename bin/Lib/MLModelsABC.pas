@@ -416,7 +416,8 @@ type
 ///   • maxDepth — максимальная глубина дерева.
 ///   • minSamplesSplit — минимальное число объектов для разбиения узла.
 ///   • minSamplesLeaf — минимальное число объектов в листе
-    constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1; seed: integer := -1);
+    constructor Create(maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer; 
+      criterion: ISplitCriterion; seed: integer);
   
 /// Возвращает вектор важности признаков.
 /// Важность вычисляется как суммарное уменьшение
@@ -474,7 +475,8 @@ type
 ///   • maxDepth — максимальная глубина дерева (-1 означает без ограничения).
 ///   • minSamplesSplit — минимальное число объектов для разбиения узла.
 ///   • minSamplesLeaf — минимальное число объектов в листе
-    constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1; seed: integer := -1);
+    constructor Create(maxDepth: integer := 10; minSamplesSplit: integer := 2; minSamplesLeaf: integer := 1; 
+      criterion: ISplitCriterion := nil; seed: integer := -1);
 
 /// Обучает классификационное дерево.
 /// X — матрица признаков.
@@ -903,8 +905,11 @@ type
       seed: integer := -1
       );
 
-/// Обучает модель на всей обучающей выборке.
-/// Если включен early stopping и subsample < 1, может использоваться OOB loss.
+/// Обучает модель градиентного бустинга на обучающей выборке.
+/// Обучение выполняется без early stopping.
+/// Для предотвращения переобучения используйте FitWithValidation.
+/// Early stopping работает только при наличии валидационной выборки
+/// и параметре earlyStoppingPatience > 0.
 /// Возвращает обученную модель.
     function Fit(X: Matrix; y: Vector): ISupervisedModel;
 /// Предсказывает значения целевой переменной.
@@ -914,10 +919,12 @@ type
 /// Копируются все деревья и внутреннее состояние.
     function Clone: IModel;
     
-/// Обучает модель с использованием отдельной validation-выборки.
-/// Early stopping (если включен) происходит по validation loss.
-    function FitWithValidation(XTrain: Matrix; yTrain: Vector;
-      XVal: Matrix; yVal: Vector): IModel;
+/// Обучает модель градиентного бустинга с использованием валидационной выборки.
+/// Поддерживает early stopping:
+/// обучение останавливается, если метрика не улучшается
+/// в течение earlyStoppingPatience итераций.
+/// Возвращает обученную модель.
+    function FitWithValidation(XTrain: Matrix; yTrain: Vector; XVal: Matrix; yVal: Vector): ISupervisedModel;
 
 /// История значения функции потерь на обучающей выборке.
 /// Один элемент на итерацию бустинга.    
@@ -1043,14 +1050,19 @@ type
       earlyStoppingPatience: integer := 20;
       seed: integer := -1);
 
-/// Обучает классификатор на всей обучающей выборке.
-/// Если включен early stopping и subsample < 1, то может использоваться OOB loss.
+/// Обучает модель градиентного бустинга на обучающей выборке.
+/// Обучение выполняется без early stopping.
+/// Для предотвращения переобучения используйте FitWithValidation.
+/// Early stopping работает только при наличии валидационной выборки
+/// и параметре earlyStoppingPatience > 0.
 /// Возвращает обученную модель.
     function Fit(X: Matrix; y: Vector): ISupervisedModel;
     
-/// Обучает классификатор с использованием validation-набора.
-/// Если включен early stopping, он основан на validation loss.
-    function FitWithValidation(XTrain: Matrix; yTrain: Vector; XVal: Matrix; yVal: Vector): IModel;
+/// Обучает модель градиентного бустинга с использованием валидационной выборки.
+/// Поддерживает early stopping:
+///   обучение останавливается, если метрика не улучшается в течение earlyStoppingPatience итераций.
+/// Возвращает обученную модель.
+    function FitWithValidation(XTrain: Matrix; yTrain: Vector; XVal: Matrix; yVal: Vector): ISupervisedModel;
 
 /// Предсказывает метки классов.
 /// Возвращает исходные значения классов, а не внутренние индексы.
@@ -1799,11 +1811,7 @@ type
 
 
 {$region Utility functions}
-/// Преобразует вектор меток классов в массив целых.
-/// Предполагается, что значения y являются целыми
-/// (0,1,2,...) и могут содержать небольшие
-/// численные ошибки, поэтому используется Round.
-function LabelsToInts(y: Vector): array of integer;
+
 
 {$endregion Utility functions}
 
@@ -2993,6 +3001,7 @@ constructor DecisionTreeBase.Create(
   maxDepth: integer;
   minSamplesSplit: integer;
   minSamplesLeaf: integer;
+  criterion: ISplitCriterion;
   seed: integer);
 begin
   if maxDepth < -1 then
@@ -3018,6 +3027,7 @@ begin
   fMaxDepth := maxDepth;
   fMinSamplesSplit := minSamplesSplit;
   fMinSamplesLeaf := minSamplesLeaf;
+  fCriterion := criterion;
 
   if seed < 0 then
   begin
@@ -3488,9 +3498,12 @@ begin
   Result := bestClass;
 end;
 
-constructor DecisionTreeClassifier.Create(maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer; seed: integer);
+constructor DecisionTreeClassifier.Create(maxDepth: integer; minSamplesSplit: integer; minSamplesLeaf: integer; 
+  criterion: ISplitCriterion; seed: integer);
 begin
-  inherited Create(maxDepth, minSamplesSplit, minSamplesLeaf, seed);
+  inherited Create(maxDepth, minSamplesSplit, minSamplesLeaf, 
+    (if criterion = nil then new GiniCriterion else criterion), 
+    seed);
 end;
 
 function DecisionTreeClassifier.Fit(X: Matrix; y: Vector): ISupervisedModel;
@@ -3619,6 +3632,7 @@ begin
     fMaxDepth,
     fMinSamplesSplit,
     fMinSamplesLeaf,
+    fCriterion,
     fRandomSeed
   );
 
@@ -3674,15 +3688,25 @@ end;
 
 // DecisionTreeRegressor
 
-constructor DecisionTreeRegressor.Create(maxDepth: integer; minSamplesSplit: integer; 
-  minSamplesLeaf: integer; leafL2: real; seed: integer);
+constructor DecisionTreeRegressor.Create(
+  maxDepth: integer; 
+  minSamplesSplit: integer; 
+  minSamplesLeaf: integer; 
+  leafL2: real; 
+  seed: integer
+);
 begin
-  inherited Create(maxDepth, minSamplesSplit, minSamplesLeaf, seed);
-  
+  inherited Create(
+    maxDepth,
+    minSamplesSplit,
+    minSamplesLeaf,
+    new VarianceCriterion,
+    seed
+  );
+
   if leafL2 < 0 then
     ArgumentOutOfRangeError(ER_LEAFL2_INVALID, leafL2);
-  
-  fCriterion := new VarianceCriterion;
+
   fLeafL2 := leafL2;
 end;
 
@@ -4224,6 +4248,7 @@ begin
       fMaxDepth,
       fMinSamplesSplit,
       fMinSamplesLeaf,
+      nil,
       treeSeed
     );
 
@@ -4858,7 +4883,7 @@ end;
 
 function GradientBoostingRegressor.FitWithValidation(
   XTrain: Matrix; yTrain: Vector;
-  XVal: Matrix; yVal: Vector): IModel;
+  XVal: Matrix; yVal: Vector): ISupervisedModel;
 begin
   Result := FitInternal(XTrain, yTrain, XVal, yVal, true);
 end;
@@ -6253,7 +6278,7 @@ end;
 
 function GradientBoostingClassifier.FitWithValidation(
   XTrain: Matrix; yTrain: Vector;
-  XVal: Matrix; yVal: Vector): IModel;
+  XVal: Matrix; yVal: Vector): ISupervisedModel;
 begin
   Result := FitInternal(XTrain, yTrain, XVal, yVal, true);
 end;
@@ -8556,11 +8581,6 @@ begin
   t.fFitted := fFitted;
   t.fFeatureCount := fFeatureCount;
   Result := t;
-end;
-
-function LabelsToInts(y: Vector): array of integer;
-begin
-  Result := ArrGen(y.Length, i -> Round(y[i]));
 end;
 
     

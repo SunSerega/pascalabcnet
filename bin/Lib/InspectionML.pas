@@ -45,7 +45,7 @@ type
   ///   Вектор важностей признаков длины nFeatures.
   ///   Чем больше значение, тем сильнее признак влияет на качество модели
     static function PermutationImportance(model: IPredictiveModel; X: Matrix; y: Vector;
-      scoreFunc: (Vector, Vector) -> real; nRepeats: integer := 5; seed: integer := 0): Vector;
+      scoreFunc: (Vector, Vector) -> real; nRepeats: integer := 5; seed: integer := -1): Vector;
   end;  
 
 implementation
@@ -65,7 +65,7 @@ static function Inspection.PermutationImportance(
   y: Vector;
   scoreFunc: (Vector, Vector) -> real; 
   nRepeats: integer;
-  seed: integer  
+  seed: integer
 ): Vector;
 begin
   if model = nil then
@@ -88,6 +88,15 @@ begin
 
   var resultVec := new Vector(p);
 
+// Базовый seed для всех параметров.
+// Все модели оцениваются на одинаковых фолдах,
+// что обеспечивает корректное сравнение.
+// При seed = -1 разбиение случайное, но фиксируется
+// один раз для всего GridSearch.
+  var baseSeed :=
+    if seed >= 0 then seed
+    else System.Environment.TickCount and integer.MaxValue;
+
   for var j := 0 to p - 1 do
   begin
     var acc := 0.0;
@@ -96,14 +105,12 @@ begin
     begin
       var Xperm := X.Clone;
 
-      // --- seed для каждого (признак, повтор)
-      var runSeed :=
-        if seed >= 0 then seed + j * 100000 + r
-        else System.Environment.TickCount and integer.MaxValue;
+      // --- детерминированный seed для (j, r)
+      var runSeed := baseSeed + j * 100000 + r;
 
       var rnd := new System.Random(runSeed);
 
-      // --- shuffle столбца j
+      // --- shuffle столбца j (Fisher–Yates)
       for var i := n - 1 downto 1 do
       begin
         var k := rnd.Next(i + 1);
