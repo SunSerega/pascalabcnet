@@ -125,6 +125,6 @@ begin
   Result := MLUtilsABC.LabelsToInts(y);
 end;
 
-function EncodeLabels(labels: array of string): array of integer := DataAdapters.EncodeLabels(labels);
+function EncodeLabels(labels: array of string): array of integer := MLUtilsABC.EncodeLabels(labels);
   
 end.

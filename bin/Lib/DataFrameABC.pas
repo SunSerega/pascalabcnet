@@ -2073,7 +2073,7 @@ begin
     names[i] := info.Name;
     types[i] := info.ColType;
 
-    // 🔥 берем из старой schema
+    // берем из старой schema
     if (fSchema <> nil) and (i < fSchema.ColumnCount) then
       cats[i] := fSchema.CategoricalFlags[i]
     else
@@ -2970,7 +2970,7 @@ begin
       Error(ER_UNKNOWN_COLUMN_TYPE);
   end;
 
-  // 🔥 КЛЮЧЕВОЕ: перенос schema
+  // КЛЮЧЕВОЕ: перенос schema
   var cats := new boolean[ColumnCount];
   for var i := 0 to ColumnCount - 1 do
     cats[i] := fSchema.CategoricalFlags[i];
@@ -3070,7 +3070,7 @@ begin
     end;
   end;
 
-  // 🔥 КЛЮЧЕВОЕ: пересобираем schema
+  // КЛЮЧЕВОЕ: пересобираем schema
   var n := ColumnCount;
   var names := new string[n];
   var types := new ColumnType[n];
@@ -3622,7 +3622,7 @@ begin
     end;
   end;
 
-  // 🔥 КЛЮЧЕВОЕ: schema НЕ меняется
+  // КЛЮЧЕВОЕ: schema НЕ меняется
   res.SetSchema(fSchema);
 
   Result := res;
@@ -3677,7 +3677,7 @@ begin
     end;
   end;
 
-  // 🔥 schema просто копируется
+  // schema просто копируется
   res.SetSchema(fSchema);
 
   Result := res;
@@ -3732,7 +3732,7 @@ begin
     end;
   end;
 
-  // 🔥 schema НЕ меняется
+  // schema НЕ меняется
   res.SetSchema(fSchema);
 
   Result := res;
@@ -3787,7 +3787,7 @@ begin
     end;
   end;
 
-  // 🔥 schema просто копируется
+  // schema просто копируется
   res.SetSchema(fSchema);
 
   Result := res;
@@ -4312,7 +4312,7 @@ begin
       res.AddColumnView(col);
   end;
 
-  // 🔥 пересобираем schema (меняются ТИПЫ)
+  // пересобираем schema (меняются ТИПЫ)
   var n := fSchema.ColumnCount;
 
   var namesArr := new string[n];
@@ -4743,7 +4743,7 @@ begin
       end;
 
       names.Add(colName);
-      cats.Add(true); // 🔥 ключи — categorical
+      cats.Add(true); // ключи — categorical
     end;
 
     res.AddIntColumn('count', counts, nil);
@@ -4752,7 +4752,7 @@ begin
     cats.Add(false);
   end;
 
-  // 🔥 устанавливаем schema
+  // устанавливаем schema
   res.SetSchema(new DataFrameSchema(
     names.ToArray,
     types.ToArray,
@@ -5322,7 +5322,7 @@ begin
 
   schemaNames.Add('Feature');
   schemaTypes.Add(ctStr);
-  schemaCats.Add(true); // 🔥 categorical
+  schemaCats.Add(true); // categorical
 
   // 2️⃣ корреляции
   for var j := 0 to n - 1 do
@@ -5342,7 +5342,7 @@ begin
     schemaCats.Add(false);
   end;
 
-  // 🔥 schema
+  // schema
   res.SetSchema(new DataFrameSchema(
     schemaNames.ToArray,
     schemaTypes.ToArray,
@@ -6324,7 +6324,7 @@ begin
     else
       types[j] := ctStr;
   
-    // 🔥 вот сюда переносим логику categorical
+    // вот сюда переносим логику categorical
     cats[j] := ((catSet <> nil) and (headers[j] in catSet)) or autoCat[j];
   end;
   

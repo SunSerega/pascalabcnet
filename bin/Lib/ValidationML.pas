@@ -311,6 +311,19 @@ begin
     end;
   end;
 
+  // --- 1.1 ПРОВЕРКА НА МИНИМАЛЬНЫЙ РАЗМЕР КЛАССА
+  foreach var pair in classMap do
+  begin
+    var cls := pair.Key;
+    var cnt := pair.Value.Count;
+
+    if cnt < k then
+      ArgumentError(
+        'StratifiedKFold: класс %d содержит %d объектов, что меньше числа фолдов (%d)',
+        cls, cnt, k
+      );
+  end;
+
   // --- 2. Контейнеры фолдов
   var folds := new List<integer>[k];
   for var f := 0 to k - 1 do

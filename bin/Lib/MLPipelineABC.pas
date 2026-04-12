@@ -56,11 +56,6 @@ type
     fTask: TaskKind;
     fTarget: string;
 
-    // fDataSteps: List<IPreprocessor>;
-    // fMatrixSteps: List<ITransformer>;
-    // fFeatures: array of string;
-    // fFinalFeatures: array of string;
-    // fFitted: boolean;
   protected
     procedure ValidateSchema(df: DataFrame); override;
   public
@@ -74,88 +69,6 @@ type
     ///   • ISupervisedModel (модель, должна быть последней)
     /// Запрещено добавлять шаги после вызова Fit/FitTransform.
     function Add(step: IPipelineStep): DataPipeline;
-    
-    { // Примеры использования препроцессоров и моделей в DataPipeline.
-    // Препроцессоры работают на уровне DataFrame.
-    // После них Pipeline автоматически преобразует данные в Matrix/Vector.
-    // Далее выполняются матричные трансформеры и модель.
-    
-    // ------------------------------------------------------------
-    // Пример 1. Классификация с категориальным целевым признаком
-    var pipe :=
-      DataPipeline.Build(
-        'species',
-        ['length','width'],
-        new LabelEncoder('species'),   // DataFrame-препроцессор (строки → числа)
-        new StandardScaler,            // матричный трансформер
-        new LogisticRegression         // модель
-      );
-    
-    // ------------------------------------------------------------
-    // Пример 2. Регрессия с пропущенными значениями и категориальным признаком
-    var pipe :=
-      DataPipeline.Build(
-        'price',
-        ['area','floor','district'],
-        new Imputer('area'),           // DataFrame-препроцессор (заполнение NA)
-        new OneHotEncoder('district'), // DataFrame-препроцессор
-        new RandomForestRegressor      // модель
-      );
-    
-    // ------------------------------------------------------------
-    // Пример 3. Сложный pipeline
-    var pipe :=
-      DataPipeline.Build(
-        'target',
-        ['f1','f2','f3','category'],
-        new Imputer('f2'),             // DataFrame-препроцессор
-        new OneHotEncoder('category'), // DataFrame-препроцессор
-        new StandardScaler,            // матричный трансформер
-        new PCATransformer(2),         // матричный трансформер
-        new GradientBoostingRegressor  // модель
-      );
-      
-    // ------------------------------------------------------------
-    // Пример 4. Классификация без Pipeline
-    var df := Datasets.Flowers;
-
-    // --- Encode target (DataFrame уровень)
-    df := df.SetCategorical(['species']);
-    
-    var labels := df.EncodeLabels('species');
-    
-    // --- X, y
-    var X := df.ToMatrix(['length','width']);
-    var y := new Vector(labels);
-    
-    // --- Matrix уровень
-    var scaler := new StandardScaler;
-    X := scaler.FitTransform(X);
-    
-    // --- Модель
-    var model := new LogisticRegression;
-    model.Fit(X, y);
-    
-    // Pipeline.Build используется, когда данные уже представлены
-    // в виде числовой матрицы признаков X и вектора целевой переменной y.
-    // В этом случае DataFrame и препроцессоры уровня таблицы не требуются.
-    //
-    // Типичные ситуации:
-    //  • экспериментирование с ML-алгоритмами
-    //  • сравнение моделей
-    //  • кросс-валидация
-    //  • подбор гиперпараметров
-    //  • тестирование моделей
-    
-    // Пример 5. Pipeline на матричном уровне
-    var pipe :=
-      Pipeline.Build(
-        new StandardScaler,
-        new PCATransformer(2),
-        new LogisticRegression
-      );
-    
-      }
     
     /// Строит конвейер из шагов обработки данных и модели.
     /// 

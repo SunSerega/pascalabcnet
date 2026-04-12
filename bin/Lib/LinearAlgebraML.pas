@@ -195,6 +195,8 @@ type
     
     function GetRow(i: integer): Vector;
     function GetCol(j: integer): Vector;
+    
+    function TakeRows(indices: array of integer): Matrix;
 
     // ---------- Статические методы ----------
     /// Возвращает единичную матрицу размера n
@@ -931,7 +933,6 @@ begin
 end;
 
 
-
 static function Matrix.operator *(A: Matrix; x: Vector): Vector;
 begin
   CheckVecSize(A, x);
@@ -945,7 +946,7 @@ begin
   end;
 end;
 
-static function Matrix.operator *(A, B: Matrix): Matrix;
+{static function Matrix.operator *(A, B: Matrix): Matrix;
 begin
   CheckMulSize(A, B);
   Result := new Matrix(A.RowCount, B.ColCount);
@@ -956,6 +957,30 @@ begin
       if aik <> 0.0 then
         for var j := 0 to B.ColCount - 1 do
           Result.fdata[i, j] += aik * B.fdata[k, j];
+    end;
+end;}
+
+static function Matrix.operator *(A, B: Matrix): Matrix;
+begin
+  CheckMulSize(A, B);
+
+  var m := A.RowCount;
+  var p := A.ColCount;
+  var n := B.ColCount;
+
+  var BT := B.Transpose;
+
+  Result := new Matrix(m, n);
+
+  for var i := 0 to m - 1 do
+    for var j := 0 to n - 1 do
+    begin
+      var sum := 0.0;
+
+      for var k := 0 to p - 1 do
+        sum += A.fdata[i, k] * BT.fdata[j, k];
+
+      Result.fdata[i, j] := sum;
     end;
 end;
 
@@ -1000,6 +1025,61 @@ begin
   Result := new Vector(ColCount);
   for var j := 0 to ColCount - 1 do
     Result[j] := fdata[i, j];
+end;
+
+function Matrix.TakeRows(indices: array of integer): Matrix;
+begin
+  var n := indices.Length;
+  var p := ColCount;
+
+  var res := new Matrix(n, p);
+
+  var src := Data;
+  var dst := res.Data;
+
+  // --- fast path: полный срез [0..n-1]
+  var isFull := n = RowCount;
+
+  if isFull then
+  begin
+    for var i := 0 to n - 1 do
+      if indices[i] <> i then
+      begin
+        isFull := False;
+        break;
+      end;
+  end;
+
+  if isFull then
+  begin
+    System.Array.Copy(src, 0, dst, 0, n * p);
+    Result := res;
+    exit;
+  end;
+
+  // --- обычный block-copy
+  var i := 0;
+  var dstOffset := 0;
+
+  while i < n do
+  begin
+    var start := indices[i];
+    var len := 1;
+
+    while (i + len < n) and (indices[i + len] = start + len) do
+      len += 1;
+
+    System.Array.Copy(
+      src, start * p,
+      dst, dstOffset,
+      len * p
+    );
+
+    dstOffset += len * p;
+    i += len;
+  end;
+
+  Result := res;
 end;
 
 function Matrix.GetCol(j: integer): Vector;

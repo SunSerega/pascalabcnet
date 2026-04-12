@@ -248,22 +248,50 @@ begin
     NotFittedError(ER_FIT_NOT_CALLED);
 
   var idx := df.Schema.IndexOf(col);
+  var n := df.RowCount;
 
-  Result := df.ReplaceColumnInt(
-    col,
-    c ->
-      if not c.IsValid(idx) then
-        Error(ER_LABELENCODER_NA)  // будет поймано как NA
-      else
+  var data := new integer[n];
+  var valid: array of boolean := nil;
+
+  var cur := df.GetCursor;
+  var row := 0;
+  while cur.MoveNext do
+  begin
+    if not cur.IsValid(idx) then
+    begin
+      if valid = nil then
       begin
-        var s := c.Str(idx);
-        if not mapping.ContainsKey(s) then
-          Error(ER_LABELENCODER_UNSEEN_CATEGORY, s);
-        Result := mapping[s];
-      end
-  );
-  
-  Result := Result.SetCategorical([col]);
+        valid := new boolean[n];
+        for var j := 0 to row - 1 do
+          valid[j] := true;
+      end;
+      valid[row] := false;
+      data[row] := 0;
+    end
+    else
+    begin
+      var s := cur.Str(idx);
+
+      if not mapping.ContainsKey(s) then
+        Error(ER_LABELENCODER_UNSEEN_CATEGORY, s);
+
+      data[row] := mapping[s];
+      if valid <> nil then
+        valid[row] := true;
+    end;
+
+    row += 1;
+  end;
+
+  var res := new DataFrame;
+
+  foreach var src in df.GetColumns do
+    if src.Info.Name <> col then
+      res.AddColumnView(src)
+    else
+      res.AddIntColumn(col, data, valid);
+
+  Result := res.SetCategorical([col]);
 end;
 
 function LabelEncoder.FitTransform(df: DataFrame): DataFrame;

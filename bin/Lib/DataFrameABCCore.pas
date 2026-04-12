@@ -64,7 +64,7 @@ type
   ColumnInfo = auto class
     Name: string;
     ColType: ColumnType;
-    //IsCategorical: boolean; - мы убрали это отсюда - только Schema - источник истины!
+    //IsCategorical - только в Schema!
   end;
   
   DataFrameCursor = class;
@@ -84,15 +84,11 @@ type
     function TryGetNumericValue(i: integer; var value: real): boolean; virtual; abstract;
     /// Возвращает количество строк в столбце
     function RowCount: integer; virtual; abstract;
-    /// Добавляет невалидное (NA) значение в конец столбца
-    //procedure AppendInvalid; virtual; abstract;
-    /// Добавляет значение из курсора в указанной позиции
-    //procedure AppendFromCursor(cur: DataFrameCursor; colIndex: integer); virtual; abstract;
   end;
   
   /// Столбец целых чисел
   IntColumn = class(Column)
-    // ⚠️ Data и IsValid считаются immutable после создания
+    // Data и IsValid считаются immutable после создания
     Data: array of integer;     // Данные столбца
     IsValid: array of boolean;  // Флаги валидности (может быть nil)
   public
@@ -103,17 +99,6 @@ type
     function TryGetNumericValue(i: integer; var value: real): boolean; override;
     /// Возвращает количество строк в столбце
     function RowCount: integer; override := Data.Length;
-    /// Добавляет невалидное (NA) значение в конец столбца
-    /// ⚠ УСТАРЕВШИЙ МЕТОД.
-    /// Не должен использоваться в новом коде.
-    /// Сохраняется только для обратной совместимости.
-    //procedure AppendInvalid; override;
-    /// Добавляет значение из курсора в указанной позиции
-    /// ⚠ УСТАРЕВШИЙ МЕТОД.
-    /// Использует неэффективное поэлементное добавление (O(n²)).
-    /// Не должен использоваться в новом коде.
-    /// Сохраняется только для обратной совместимости.
-    //procedure AppendFromCursor(cur: DataFrameCursor; colIndex: integer); override;
   end;
   
   /// Столбец вещественных чисел
@@ -128,10 +113,6 @@ type
     function TryGetNumericValue(i: integer; var value: real): boolean; override;
     /// Возвращает количество строк в столбце
     function RowCount: integer; override := Data.Length;
-    /// Добавляет невалидное (NA) значение в конец столбца
-    //procedure AppendInvalid; override;
-    /// Добавляет значение из курсора в указанной позиции
-    //procedure AppendFromCursor(cur: DataFrameCursor; colIndex: integer); override;
   end;
 
   /// Столбец строк
@@ -164,10 +145,6 @@ type
     function TryGetNumericValue(i: integer; var value: real): boolean; override;
     /// Возвращает количество строк в столбце
     function RowCount: integer; override := Data.Length;
-    /// Добавляет невалидное (NA) значение в конец столбца
-    //procedure AppendInvalid; override;
-    /// Добавляет значение из курсора в указанной позиции
-    //procedure AppendFromCursor(cur: DataFrameCursor; colIndex: integer); override;
   end;
   
   // Accessor типы для курсора
