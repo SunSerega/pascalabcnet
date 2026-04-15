@@ -108,7 +108,9 @@ const
     'Некорректное значение параметра {0}!!Invalid value for parameter {0}';
   ER_DATASET_TOO_SMALL =
     'Для {0} требуется как минимум 2 объекта!!' +
-    'At least 2 samples are required for {0}';    
+    'At least 2 samples are required for {0}';
+  ER_STRATIFIED_CLASS_TOO_SMALL =
+    'Класс {0} содержит {1} объектов, что меньше числа фолдов ({2})!!Class {0} has {1} samples, which is less than the number of folds ({2})';    
     
 //-----------------------------
 //         Validation
@@ -319,7 +321,7 @@ begin
 
     if cnt < k then
       ArgumentError(
-        'StratifiedKFold: класс %d содержит %d объектов, что меньше числа фолдов (%d)',
+        ER_STRATIFIED_CLASS_TOO_SMALL,
         cls, cnt, k
       );
   end;

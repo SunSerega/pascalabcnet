@@ -259,7 +259,7 @@ type
     /// Датасет российских городов (задача кластеризации)
     static function RussianCities: Dataset;
     
-    /// Датасет результатов экзамена студентов (классификация)
+    {/// Датасет результатов экзамена студентов (классификация)
     static function StudentExam: Dataset;
     
     /// Датасет банковских клиентов (классификация одобрения кредита)
@@ -272,7 +272,7 @@ type
     static function MoscowTransport: Dataset;
     
     /// Датасет интернет-покупок пользователей (классификация покупки)
-    static function OnlineShopping: Dataset;
+    static function OnlineShopping: Dataset;}
     
     static function LoadMeta(path: string): Dictionary<string,string>;
     static function ParseFeatures(meta: Dictionary<string,string>): array of string;
@@ -330,6 +330,11 @@ const
     'Неподдерживаемый тип ключа для группировки!!Unsupported key type for grouping';
   ER_STRATIFIED_ONLY_FOR_CLASSIFICATION =
     'Стратифицированное разбиение доступно только для задач классификации!!Stratified split is only for classification tasks';
+  ER_CLASS_BALANCE_TOO_SMALL =
+    'Слишком малое значение classBalance: {0}. Минимально допустимое значение — 1e-3!!classBalance is too small: {0}. Minimum allowed value is 1e-3';
+  ER_UNSUPPORTED_TARGET_TYPE =
+    'Неподдерживаемый тип целевого столбца: {0}!!Unsupported target column type: {0}';    
+    
   
   C_DATASET      = 'Датасет: {0}!!Dataset: {0}';
   C_DESCRIPTION  = 'Описание:!!Description:';
@@ -593,7 +598,14 @@ begin
   if Task <> TaskType.Classification then
     ArgumentError(ER_CLASSES_ONLY_CLASSIFICATION);
 
-  Result := Data.GetStrColumn(Target).Distinct.ToArray;
+  var idx := Data.ColumnIndex(Target);
+  var t := Data.GetColumnType(idx);
+
+  case t of
+    ctStr: Result := Data.GetStrColumn(Target).Distinct.ToArray;
+    ctInt: Result := Data.GetIntColumn(Target).Distinct.Select(x -> x.ToString).ToArray;
+    else Error(ER_UNSUPPORTED_TARGET_TYPE, t);
+  end;
 end;
 
 function Dataset.ClassCounts: Dictionary<string,integer>;
@@ -677,6 +689,9 @@ begin
   
   if (classBalance <= 0) or (classBalance > 1) then
     ArgumentOutOfRangeError(ER_PARAM_RANGE_01, 'classBalance');
+  
+  if classBalance < 1e-3 then
+    ArgumentOutOfRangeError(ER_CLASS_BALANCE_TOO_SMALL, classBalance);
   
   if noisePoints < 0 then
     ArgumentOutOfRangeError(ER_PARAM_GE_ZERO, 'noisePoints');
@@ -1301,7 +1316,7 @@ begin
   Result := ds;
 end;
 
-static function Datasets.StudentExam: Dataset;
+{static function Datasets.StudentExam: Dataset;
 begin
   NotImplementedError(ER_NOT_IMPLEMENTED, 'Datasets.StudentExam');
   Result := nil;
@@ -1329,7 +1344,7 @@ static function Datasets.OnlineShopping: Dataset;
 begin
   NotImplementedError(ER_NOT_IMPLEMENTED, 'Datasets.OnlineShopping');
   Result := nil;
-end;
+end;}
 
 static function Datasets.LoadMeta(path: string): Dictionary<string,string>;
 begin

@@ -1,5 +1,20 @@
 ﻿unit DataFrameABCCore;
 
+// =============================================================
+// ИНВАРИАНТ ВАЛИДНОСТИ СТОЛБЦОВ
+//
+// Для всех столбцов:
+//   • IsValid всегда инициализирован
+//   • Length(IsValid) = Length(Data)
+//   • nil не используется как специальное значение
+//
+// Пустой столбец:
+//   • Data имеет длину 0
+//   • IsValid = new boolean[0]
+//
+// Нарушение этого инварианта считается ошибкой.
+// =============================================================
+
 interface
 
 type
@@ -275,7 +290,9 @@ const
     'Неизвестный тип столбца!!Unknown column type';
   ER_ROW_INDEX_OUT_OF_RANGE =
     'Индекс строки {0} вне диапазона [0..{1})!!' +
-    'Row index {0} out of range [0..{1})';  
+    'Row index {0} out of range [0..{1})'; 
+  ER_INVALID_ISVALID_LENGTH =
+    'Длина IsValid должна совпадать с длиной Data!!IsValid length must match Data length';  
     
 //-----------------------------
 //      Сервисные функции
@@ -547,121 +564,97 @@ end;
 //           Columns
 //-----------------------------
 
-constructor IntColumn.Create(name: string; data: array of integer;
-  valid: array of boolean);
+constructor IntColumn.Create(name: string; data: array of integer; valid: array of boolean);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctInt);
 
-  Data := data;
-  IsValid := valid;
-end;
+  var n := Length(data);
+  Data := if n = 0 then [] else data;
 
+  if valid = nil then
+    IsValid := [True] * n
+  else
+  begin
+    if Length(valid) <> n then
+      Error(ER_INVALID_ISVALID_LENGTH);
+
+    IsValid := valid;
+  end;
+end;
 
 constructor IntColumn.Create(name: string);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctInt);
 
-  Data := new integer[0];
-  IsValid := nil;
+  Data := [];
+  IsValid := [];
 end;
-
-{procedure IntColumn.AppendInvalid;
-begin
-  Data := Data + [0];
-
-  if IsValid = nil then
-  begin
-    IsValid := new boolean[Length(Data) - 1];
-    for var i := 0 to IsValid.Length - 1 do
-      IsValid[i] := true;
-  end;
-
-  IsValid := IsValid + [false];
-end;}
-
-{procedure IntColumn.AppendFromCursor(cur: DataFrameCursor; colIndex: integer);
-begin
-  if cur.IsValid(colIndex) then
-  begin
-    Data := Data + [cur.Int(colIndex)];
-    if IsValid <> nil then 
-      IsValid := IsValid + [true];
-  end
-  else AppendInvalid; 
-end;}
 
 function IntColumn.TryGetNumericValue(i: integer; var value: real): boolean;
 begin
   if not IsValid[i] then
-    exit(false);
+    exit(False);
 
   value := Data[i];
-  exit(true);
+  exit(True);
 end;
 
-constructor FloatColumn.Create(name: string; data: array of real;
-  valid: array of boolean);
+constructor FloatColumn.Create(name: string; data: array of real; valid: array of boolean);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctFloat);
 
-  Data := data;
-  IsValid := valid;
+  var n := Length(data);
+  Data := if n = 0 then [] else data;
+
+  if valid = nil then
+    IsValid := [True] * n
+  else
+  begin
+    if Length(valid) <> n then
+      Error(ER_INVALID_ISVALID_LENGTH);
+
+    IsValid := valid;
+  end;
 end;
 
 constructor FloatColumn.Create(name: string);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctFloat);
-  Data := new real[0];
-  IsValid := nil;
+
+  Data := [];
+  IsValid := [];
 end;
-
-
-{procedure FloatColumn.AppendFromCursor(cur: DataFrameCursor; colIndex: integer);
-begin
-  if cur.IsValid(colIndex) then
-  begin
-    Data := Data + [cur.Float(colIndex)];
-    if IsValid <> nil then 
-      IsValid := IsValid + [true];
-  end
-  else AppendInvalid;
-end;}
-
-{procedure FloatColumn.AppendInvalid;
-begin
-  Data := Data + [0.0];
-
-  if IsValid = nil then
-  begin
-    IsValid := new boolean[Length(Data) - 1];
-    for var i := 0 to IsValid.Length - 1 do
-      IsValid[i] := true;
-  end;
-
-  IsValid := IsValid + [false];
-end;}
 
 function FloatColumn.TryGetNumericValue(i: integer; var value: real): boolean;
 begin
   if not IsValid[i] then
-    exit(false);
+    exit(False);
 
   value := Data[i];
-  exit(true);
+  exit(True);
 end;
 
-constructor StrColumn.Create(name: string; data: array of string;
-  valid: array of boolean);
+constructor StrColumn.Create(name: string; data: array of string; valid: array of boolean);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctStr);
 
-  Data := data;
-  IsValid := valid;
+  var n := Length(data);
+  Data := if n = 0 then [] else data;
+
+  if valid = nil then
+    IsValid := [True] * n
+  else
+  begin
+    if Length(valid) <> n then
+      Error(ER_INVALID_ISVALID_LENGTH);
+
+    IsValid := valid;
+  end;
 end;
 
 constructor StrColumn.Create(name: string);
@@ -669,61 +662,32 @@ begin
   inherited Create;
   Info := new ColumnInfo(name, ctStr);
 
-  Data := new string[0];
-  IsValid := nil;
+  Data := [];
+  IsValid := [];
 end;
-
-{procedure StrColumn.AppendFromCursor(cur: DataFrameCursor; colIndex: integer);
-begin
-  if cur.IsValid(colIndex) then
-  begin
-    Data := Data + [cur.Str(colIndex)];
-    if IsValid <> nil then 
-      IsValid := IsValid + [true];
-  end
-  else AppendInvalid;
-end;}
-
-{procedure StrColumn.AppendInvalid;
-begin
-  Data := Data + [''];
-
-  if IsValid = nil then
-  begin
-    IsValid := new boolean[Length(Data) - 1];
-    for var i := 0 to IsValid.Length - 1 do
-      IsValid[i] := true;
-  end;
-
-  IsValid := IsValid + [false];
-end;}
 
 function StrColumn.TryGetNumericValue(i: integer; var value: real): boolean;
 begin
-  exit(false);
+  exit(False);
 end;
 
-function BoolColumn.TryGetNumericValue(i: integer; var value: real): boolean;
-begin
-  if not IsValid[i] then
-    exit(false);
-
-  if Data[i] then
-    value := 1.0
-  else
-    value := 0.0;
-
-  exit(true);
-end;
-
-constructor BoolColumn.Create(name: string; data: array of boolean;
-  valid: array of boolean);
+constructor BoolColumn.Create(name: string; data: array of boolean; valid: array of boolean);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctBool);
 
-  Data := data;
-  IsValid := valid;
+  var n := Length(data);
+  Data := if n = 0 then [] else data;
+
+  if valid = nil then
+    IsValid := [True] * n
+  else
+  begin
+    if Length(valid) <> n then
+      Error(ER_INVALID_ISVALID_LENGTH);
+
+    IsValid := valid;
+  end;
 end;
 
 constructor BoolColumn.Create(name: string);
@@ -731,34 +695,24 @@ begin
   inherited Create;
   Info := new ColumnInfo(name, ctBool);
 
-  Data := new boolean[0];
-  IsValid := nil;
+  Data := [];
+  IsValid := [];
 end;
 
-{procedure BoolColumn.AppendFromCursor(cur: DataFrameCursor; colIndex: integer);
+function BoolColumn.TryGetNumericValue(i: integer; var value: real): boolean;
 begin
-  if cur.IsValid(colIndex) then
-  begin
-    Data := Data + [cur.Bool(colIndex)];
-    if IsValid <> nil then 
-      IsValid := IsValid + [true];
-  end
-  else AppendInvalid;
-end;}
+  if not IsValid[i] then
+    exit(False);
 
-{procedure BoolColumn.AppendInvalid;
-begin
-  Data := Data + [false];
+  if Data[i] then
+    value := 1.0
+  else
+    value := 0.0;
 
-  if IsValid = nil then
-  begin
-    IsValid := new boolean[Length(Data) - 1];
-    for var i := 0 to IsValid.Length - 1 do
-      IsValid[i] := true;
-  end;
+  exit(True);
+end;
 
-  IsValid := IsValid + [false];
-end;}
+
 
 //-----------------------------
 //           JoinKey
@@ -848,10 +802,7 @@ begin
       ctInt:
       begin
         var c := IntColumn(col);
-        if c.IsValid = nil then
-          validAcc[i] := pos -> true
-        else
-          validAcc[i] := pos -> c.IsValid[pos];
+        validAcc[i] := pos -> c.IsValid[pos];
     
         intAcc[i] := pos -> c.Data[pos];
         floatAcc[i] := pos -> c.Data[pos];
@@ -860,10 +811,7 @@ begin
       ctFloat:
       begin
         var c := FloatColumn(col);
-        if c.IsValid = nil then
-          validAcc[i] := pos -> true
-        else
-          validAcc[i] := pos -> c.IsValid[pos];
+        validAcc[i] := pos -> c.IsValid[pos];
     
         floatAcc[i] := pos -> c.Data[pos];
         intAcc[i] := NotInt;
@@ -872,10 +820,7 @@ begin
       ctStr:
       begin
         var c := StrColumn(col);
-        if c.IsValid = nil then
-          validAcc[i] := pos -> true
-        else
-          validAcc[i] := pos -> c.IsValid[pos];
+        validAcc[i] := pos -> c.IsValid[pos];
     
         strAcc[i] := pos -> c.Data[pos];
       end;
@@ -883,10 +828,7 @@ begin
       ctBool:
       begin
         var c := BoolColumn(col);
-        if c.IsValid = nil then
-          validAcc[i] := pos -> true
-        else
-          validAcc[i] := pos -> c.IsValid[pos];
+        validAcc[i] := pos -> c.IsValid[pos];
     
         boolAcc[i] := pos -> c.Data[pos];
       end;

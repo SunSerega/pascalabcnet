@@ -1,4 +1,13 @@
-﻿/// Линейная алгебра для алгоритмов машинного обучения.
+﻿// =============================================================
+// СТАТИСТИЧЕСКОЕ СОГЛАШЕНИЕ (LinearAlgebraML)
+//
+// Используется дисперсия генеральной совокупности (деление на n),
+// как принято в численных методах и алгоритмах машинного обучения.
+//
+// См. статистическую политику в модуле MLABC.
+// =============================================================
+
+/// Линейная алгебра для алгоритмов машинного обучения.
 ///
 /// Содержит типы Vector и Matrix и численные методы,
 /// используемые в моделях ML:
@@ -325,6 +334,9 @@ const
     'Для QR-разложения требуется m >= n!!QR decomposition requires m >= n';
   ER_SINGULAR_MATRIX =
     'Матрица вырождена или плохо обусловлена!!Matrix is singular or ill-conditioned';
+  ER_EMPTY_MATRIX =
+    'Матрица пуста!!Matrix is empty';    
+    
   
 type
   MLNotSPDException = class(MLException);
@@ -470,7 +482,7 @@ end;
 function Vector.Average: real;
 begin
   if Length = 0 then
-    ArgumentError('Vector is empty');
+    ArgumentError(ER_VECTOR_EMPTY);
 
   Result := Sum / Length;
 end;
@@ -646,6 +658,10 @@ function Matrix.ColumnMins: Vector;
 begin
   var n := RowCount;
   var p := ColCount;
+  
+  if n = 0 then
+    exit(new Vector(p));
+
   Result := new Vector(p);
 
   for var j := 0 to p - 1 do
@@ -662,6 +678,10 @@ function Matrix.ColumnMaxs: Vector;
 begin
   var n := RowCount;
   var p := ColCount;
+  
+  if n = 0 then
+    exit(new Vector(p));
+
   Result := new Vector(p);
 
   for var j := 0 to p - 1 do
@@ -678,6 +698,10 @@ function Matrix.RowMins: Vector;
 begin
   var n := RowCount;
   var p := ColCount;
+  
+  if n = 0 then
+    exit(new Vector(p));
+
   Result := new Vector(n);
 
   for var i := 0 to n - 1 do
@@ -694,6 +718,10 @@ function Matrix.RowMaxs: Vector;
 begin
   var n := RowCount;
   var p := ColCount;
+  
+  if n = 0 then
+    exit(new Vector(p));
+
   Result := new Vector(n);
 
   for var i := 0 to n - 1 do
@@ -782,10 +810,15 @@ end;
 
 function Matrix.ColumnArgMin(j: integer): integer;
 begin
+  var n := RowCount;
+
+  if n = 0 then
+    Error(ER_EMPTY_MATRIX);
+
   var minVal := fdata[0,j];
   var arg := 0;
 
-  for var i := 1 to RowCount - 1 do
+  for var i := 1 to n - 1 do
     if fdata[i,j] < minVal then
     begin
       minVal := fdata[i,j];
@@ -802,10 +835,15 @@ end;
 
 function Matrix.ColumnArgMax(j: integer): integer;
 begin
+  var n := RowCount;
+
+  if n = 0 then
+    Error(ER_EMPTY_MATRIX);
+
   var maxVal := fdata[0,j];
   var arg := 0;
 
-  for var i := 1 to RowCount - 1 do
+  for var i := 1 to n - 1 do
     if fdata[i,j] > maxVal then
     begin
       maxVal := fdata[i,j];
@@ -1388,7 +1426,7 @@ begin
         maxRow := i;
       end;
     
-    if maxVal = 0.0 then
+    if maxVal < 1e-12 then
       Error(ER_MATRIX_SINGULAR);
     
     if maxRow <> k then
@@ -1603,6 +1641,9 @@ begin
     var vnorm2 := 0.0;
     for var i := k to m - 1 do
       vnorm2 += R[i,k] * R[i,k];
+    
+    if vnorm2 < 1e-12 then
+      continue;
     
     var beta := 2.0 / vnorm2;
 

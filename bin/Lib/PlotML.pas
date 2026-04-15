@@ -785,6 +785,7 @@ begin
     var container := rootChart.Content as GridWPF;
     if container <> nil then
       container.Children.Clear;
+    rootPaletteIndex := 0;
   end);
 end;
 

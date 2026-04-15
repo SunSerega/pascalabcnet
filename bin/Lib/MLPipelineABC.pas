@@ -50,7 +50,7 @@ type
   ///   • target — целевая переменная.
   ///
   /// Если модель не добавлена, DataPipeline работает как чистый DF-конвейер (Fit/Transform/FitTransform)  
-  DataPipeline = class(PipelineBase)
+  DataPipeline = class(PipelineBase, IModel)
   private
     fModel: ISupervisedModel;
     fTask: TaskKind;
@@ -112,6 +112,10 @@ type
     function GetClassLabels: array of string;
     
     function ToString: string; override;
+    
+    function Name: string := Self.GetType.Name;
+    
+    function Clone: IModel;
   end;
   
   /// UDataPipeline — конвейер подготовки данных и обучения модели без учителя на DataFrame.
@@ -131,7 +135,7 @@ type
   ///
   /// Если модель не добавлена, UDataPipeline работает как чистый DF-конвейер
   /// (Fit/Transform/FitTransform)
-  UDataPipeline = class(PipelineBase)
+  UDataPipeline = class(PipelineBase, IModel)
   private
     //fDataSteps: List<IPreprocessor>;
     //fMatrixSteps: List<ITransformer>;
@@ -198,6 +202,10 @@ type
     function PredictLabels(df: DataFrame): array of integer;
   
     function ToString: string; override;
+    
+    function Clone: IModel;
+    
+    function Name: string := Self.GetType.Name;
   end;  
   
 implementation
@@ -304,6 +312,8 @@ const
   ER_MODEL_NOT_CLASSIFIER =
     'Модель не является классификатором!!' +
     'Model is not a classifier';
+  ER_MODEL_CLONE_TYPE = 
+    'Clone модели вернул неподдерживаемый тип!!Model Clone returned unsupported type';
 
 //-----------------------------
 //        DataPipeline
@@ -588,6 +598,10 @@ begin
   if feats.Count = 0 then
     ArgumentError(ER_PIPELINE_NO_FEATURES);
 
+  // fFinalFeatures — признаки DataFrame (ДО matrix-transform)
+  // После FitTransformMatrix пространство признаков меняется (PCA и т.п.),
+  // но fFinalFeatures используется только для ToMatrix в Predict.
+  
   fFinalFeatures := feats.ToArray;
 
   var X := current.ToMatrix(fFinalFeatures);
@@ -611,10 +625,12 @@ begin
 
   // --- 3) Matrix transformers
   X := FitTransformMatrix(X, y);
-  
+  // После этого X уже не соответствует fFinalFeatures по размерности,
+  // но это нормально: fFinalFeatures используется только до ToMatrix.
+
   // --- 4) модель
   fModel := fModel.Fit(X, y);
-  
+
   if fTask = tkClassification then
   begin
     if fModel is IClassifier(var cls) then
@@ -671,18 +687,10 @@ begin
     ArgumentError(ER_MODEL_NULL);
 
   var current := Transform(df);
-  
-  if fFinalFeatures = nil then
-    Error(ER_PIPELINE_FINALFEATURES);
-  
-  for var i := 0 to High(fFinalFeatures) do
-  if not current.HasColumn(fFinalFeatures[i]) then
-    ArgumentError(ER_PIPELINE_FEATURE_NOT_FOUND, fFinalFeatures[i]);
 
   var X := current.ToMatrix(fFinalFeatures);
-
   X := TransformMatrix(X);
-  
+
   if not (fModel is IPredictiveModel) then
     Error(ER_PREDICT_NOT_SUPPORTED);
 
@@ -703,16 +711,8 @@ begin
     ArgumentError(ER_PROBA_NOT_SUPPORTED);
 
   var current := Transform(df);
-  
-  if fFinalFeatures = nil then
-    Error(ER_PIPELINE_FINALFEATURES);
-  
-  for var i := 0 to High(fFinalFeatures) do
-    if not current.HasColumn(fFinalFeatures[i]) then
-      ArgumentError(ER_PIPELINE_FEATURE_NOT_FOUND, fFinalFeatures[i]);
-  
-  var X := current.ToMatrix(fFinalFeatures);
 
+  var X := current.ToMatrix(fFinalFeatures);
   X := TransformMatrix(X);
 
   Result := (fModel as IProbabilisticClassifier).PredictProba(X);
@@ -805,6 +805,36 @@ begin
     sb += '  [' + idx + '] ' + fModel.ToString;
 
   Result := sb;
+end;
+
+function DataPipeline.Clone: IModel;
+begin
+  var p := new DataPipeline;
+
+  // --- конфигурация
+  p.fFeatures := Copy(fFeatures);
+  p.fTarget := fTarget;
+  p.fTask := fTask;
+
+  // --- шаги (глубокая копия)
+  p.fDataSteps := fDataSteps.Select(s -> s.Clone).ToList;
+  p.fMatrixSteps := fMatrixSteps.Select(s -> s.Clone).ToList;
+
+  // --- модель (глубокая копия конфигурации)
+  if fModel <> nil then
+  begin  
+    var m := fModel.Clone;
+    if not (m is ISupervisedModel) then
+      Error(ER_MODEL_CLONE_TYPE);
+    
+    p.fModel := m as ISupervisedModel;   
+  end;  
+
+  // --- состояние НЕ копируем
+  p.fFinalFeatures := nil;
+  p.fFitted := false;
+
+  Result := p;
 end;
 
 //-----------------------------
@@ -1193,6 +1223,28 @@ begin
     sb += '  [' + idx + '] ' + fModel.ToString;
 
   Result := sb;
+end;
+
+function UDataPipeline.Clone: IModel;
+begin
+  var p := new UDataPipeline;
+
+  // --- конфигурация
+  p.fFeatures := Copy(fFeatures);
+
+  // --- шаги (глубокая копия)
+  p.fDataSteps := fDataSteps.Select(s -> s.Clone).ToList;
+  p.fMatrixSteps := fMatrixSteps.Select(s -> s.Clone).ToList;
+
+  // --- модель
+  if fModel <> nil then
+    p.fModel := fModel.Clone as IUnsupervisedModel;
+
+  // --- состояние НЕ копируем
+  p.fFinalFeatures := nil;
+  p.fFitted := false;
+
+  Result := p;
 end;
 
 end.

@@ -8,6 +8,24 @@ interface
 
 uses LinearAlgebraML;
 
+/// Определяет фактический seed для генератора случайных чисел.
+///
+/// Если seed >= 0:
+///   • используется заданное пользователем значение
+///   • userProvided := true
+///
+/// Если seed < 0:
+///   • генерируется псевдослучайный seed на основе системного времени
+///   • userProvided := false
+///
+/// Возвращает:
+///   • неотрицательный seed, используемый для инициализации RNG
+///
+/// Назначение:
+///   • обеспечить единое поведение случайности во всех моделях
+///   • сохранить воспроизводимость при явном задании seed
+function ResolveRandomSeed(seed: integer; var userProvided: boolean): integer;
+
 /// Преобразует вектор меток классов в массив целых чисел.
 /// Используется при визуализации и других задачах,
 ///   где метки должны быть представлены как 0,1,2,...
@@ -69,6 +87,20 @@ const
   ER_LABEL_INDEX_OUT_OF_RANGE =
     'Индекс метки {0} вне диапазона [0, {1})!!Label index {0} is out of range [0, {1})';
    
+
+function ResolveRandomSeed(seed: integer; var userProvided: boolean): integer;
+begin
+  if seed < 0 then
+  begin
+    userProvided := false;
+    Result := System.Environment.TickCount and integer.MaxValue;
+  end
+  else
+  begin
+    userProvided := true;
+    Result := seed;
+  end;
+end;
 
 function LabelsToInts(y: Vector): array of integer;
 begin

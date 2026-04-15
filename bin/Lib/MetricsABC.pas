@@ -994,7 +994,7 @@ begin
   var correct := 0;
 
   for var i := 0 to n - 1 do
-    if yTrue[i] = yPred[i] then
+    if Round(yTrue[i]) = Round(yPred[i]) then
       correct += 1;
 
   Result := correct / n;
@@ -1667,6 +1667,9 @@ end;
 /// 1   — идеальное совпадение кластеризации и истинных меток
 /// 0   — случайное разбиение
 /// <0  — хуже случайного
+/// Сложность: O(n²). При больших n может быть медленным.
+/// Для больших выборок рекомендуется использовать альтернативную реализацию
+/// через таблицу сопряжённости (contingency table) с асимптотикой O(n · k)
 static function Metrics.AdjustedRandIndex(yTrue, yPred: Vector): real;
 begin
   if yTrue.Length <> yPred.Length then
