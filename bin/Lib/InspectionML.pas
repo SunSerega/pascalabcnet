@@ -45,7 +45,10 @@ type
   ///   Вектор важностей признаков длины nFeatures.
   ///   Чем больше значение, тем сильнее признак влияет на качество модели
     static function PermutationImportance(model: IPredictiveModel; X: Matrix; y: Vector;
-      scoreFunc: (Vector, Vector) -> real; nRepeats: integer := 5; seed: integer := -1): Vector;
+      scoreFunc: (Vector, Vector) -> real; 
+      nRepeats: integer := 5; 
+      higherIsBetter: boolean := True;
+      seed: integer := -1): Vector;
   end;  
 
 implementation
@@ -61,12 +64,11 @@ const
 
 static function Inspection.PermutationImportance(
   model: IPredictiveModel; 
-  X: Matrix; 
-  y: Vector;
+  X: Matrix; y: Vector;
   scoreFunc: (Vector, Vector) -> real; 
   nRepeats: integer;
-  seed: integer
-): Vector;
+  higherIsBetter: boolean;
+  seed: integer): Vector;
 begin
   if model = nil then
     ArgumentNullError(ER_MODEL_NULL);
@@ -122,7 +124,10 @@ begin
       var permPred := model.Predict(Xperm);
       var permScore := scoreFunc(y, permPred);
 
-      acc += (baselineScore - permScore);
+      if higherIsBetter then
+        acc += (baselineScore - permScore)
+      else
+        acc += (permScore - baselineScore);
     end;
 
     resultVec[j] := acc / nRepeats;

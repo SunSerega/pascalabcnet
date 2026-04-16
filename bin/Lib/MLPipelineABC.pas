@@ -285,7 +285,7 @@ const
   ER_CLASSES_NOT_AVAILABLE = 
     'Метки классов недоступны. Убедитесь, что конвейер обучен и задача — классификация!!Class labels are not available. Ensure the pipeline is fitted and the task is classification';  
   ER_LABELENCODER_TARGET_NOT_ALLOWED =
-    'LabelEncoder нельзя применять к целевому столбцу. Используйте EncodeLabels!!LabelEncoder cannot be applied to the target column. Use EncodeLabels instead';
+    'LabelEncoder нельзя применять к целевой переменной — кодирование выполняется внутри модели!!LabelEncoder cannot be applied to target — encoding is handled internally by the model';
   ER_ENCODELABELS_NOT_CATEGORICAL =
     'Целевой столбец должен быть категориальным для задач классификации!!Target column must be categorical for classification tasks';
   ER_PIPELINE_TARGET_TRANSFORM_NOT_ALLOWED =

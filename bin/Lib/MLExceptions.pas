@@ -4,7 +4,7 @@ interface
 
 const
   ER_DIM_MISMATCH =
-    'Несоответствие размерностей: {0} и {1}!!Dimension mismatch: {0} and {1}';  
+    'Размерности не совпадают: {0} и {1}!!Dimension mismatch: {0} and {1}';  
   ER_PARAM_VALUES_EMPTY =
     'Список paramValues пуст!!paramValues is empty';
   ER_EMPTY_DATASET =
@@ -25,6 +25,33 @@ const
     'В DataFrame отсутствует столбец "{0}"!!DataFrame does not contain column "{0}"';  
   ER_NOT_IMPLEMENTED = 
     'Метод {0} не реализован!!Method {0} is not implemented';
+  ER_X_NULL =
+    'X не может быть nil!!X cannot be nil';
+  ER_Y_NULL =
+    'y не может быть nil!!y cannot be nil';
+  ER_XY_SIZE_MISMATCH =
+    'Размерности X и y не согласованы!!X and y size mismatch';
+  ER_FEATURE_COUNT_MISMATCH =
+    'Число признаков не совпадает!!Feature count mismatch';
+  ER_NAN_IN_X =  
+    'X содержит NaN (пропуски)!!X contains NaN';  
+  ER_NAN_IN_Y =
+    'y содержит NaN (пропуски)!!y contains NaN';  
+  ER_TRAINING_DATA_CONTAINS_NAN =
+    'Обучающие данные содержат NaN. Обработайте пропуски до вызова Fit.!!' +
+    'Training data contains NaN. Please handle missing values before calling Fit.';
+  ER_TRAINING_DATA_CONTAINS_INF =
+    'Обучающие данные содержат Infinity. Проверьте данные на выбросы.!!' +
+    'Training data contains Infinity. Please check for extreme values.';
+  ER_PREDICTION_DATA_CONTAINS_NAN =
+    'Данные для предсказания содержат NaN. Обработайте пропуски до вызова Predict.!!' +
+    'Prediction data contains NaN. Please handle missing values before calling Predict.';
+  ER_PREDICTION_DATA_CONTAINS_INF =
+    'Данные для предсказания содержат Infinity. Проверьте данные на выбросы.!!' +
+    'Prediction data contains Infinity. Please check for extreme values.';  
+  ER_MODEL_NOT_FITTED =
+    'Модель "{0}" не обучена. Сначала вызовите Fit()|Model "{0}" is not fitted. Call Fit() first';
+    
   
 type
   /// Базовое исключение ML-библиотеки

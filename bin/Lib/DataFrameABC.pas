@@ -2119,6 +2119,9 @@ end;
 
 function DataFrame.RowCount: integer;
 begin
+  //if (columns[0] is StrColumn (var sc)) and (sc.Data = nil) then
+  //  raise new Exception('Data = nil detected');
+  
   if columns.Count = 0 then
     Result := 0
   else Result := columns[0].RowCount;

@@ -1,17 +1,4 @@
-﻿// =============================================================
-// СТАТИСТИЧЕСКОЕ СОГЛАШЕНИЕ (MLModelsABC)
-//
-// Модели и трансформеры используют статистические методы
-// из LinearAlgebraML.
-//
-// В частности:
-//   • StandardScaler, VarianceThreshold и др. используют
-//     дисперсию с делением на n (population variance)
-//
-// См. статистическую политику в модуле MLABC.
-// =============================================================
-
-/// Модуль моделей машинного обучения и матричных преобразований.
+﻿/// Модуль моделей машинного обучения и матричных преобразований.
 ///
 /// Содержит:
 /// • функции активации
@@ -24,6 +11,19 @@
 /// Все алгоритмы работают с числовыми данными:
 /// X — Matrix (объекты × признаки), y — Vector (целевая переменная).
 unit MLModelsABC;
+
+// =============================================================
+// СТАТИСТИЧЕСКОЕ СОГЛАШЕНИЕ (MLModelsABC)
+//
+// Модели и трансформеры используют статистические методы
+// из LinearAlgebraML.
+//
+// В частности:
+//   • StandardScaler, VarianceThreshold и др. используют
+//     дисперсию с делением на n (population variance)
+//
+// См. статистическую политику в модуле MLABC.
+// =============================================================
 
 interface
 
@@ -205,7 +205,7 @@ type
 /// Обучение выполняется методом покоординатного спуска 
 /// ВАЖНО: Модель чувствительна к масштабу признаков.
 /// Всегда используйте StandardScaler в Pipeline перед ElasticNet.
-  ElasticNet = class(IRegressor)
+    ElasticNet = class(IRegressor)
   private
     fLambda1: real;   // L1
     fLambda2: real;   // L2
@@ -549,6 +549,7 @@ type
       minSamplesSplit: integer;
       minSamplesLeaf: integer;
       criterion: ISplitCriterion;
+      classCount: integer;
       maxFeatures: integer;
       seed: integer := -1
     );
@@ -2023,7 +2024,11 @@ type
 
 /// Стандартизирует признаки: вычитает среднее
 ///   и делит на стандартное отклонение по каждому столбцу.
-/// Используется для приведения признаков к сопоставимому масштабу
+/// Используется для приведения признаков к сопоставимому масштабу.
+///
+/// Примечание:
+///   • стандартное отклонение вычисляется с делением на n
+///     (population variance, как в sklearn)
   StandardScaler = class(IUnsupervisedTransformer)
   private
     fMean: Vector;
@@ -2438,16 +2443,6 @@ const
     'Неизвестный тип FeatureScore!!Unknown FeatureScore type';
   ER_SELECTKBEST_FIT_INVALID =
     'Для SelectKBest необходимо вызывать Fit(X, y)!!SelectKBest requires Fit(X, y)';
-  ER_FIT_NOT_CALLED =
-    'Необходимо вызвать Fit перед Predict!!Fit must be called before Predict';
-  ER_X_NULL =
-    'X не может быть nil!!X cannot be nil';
-  ER_Y_NULL =
-    'y не может быть nil!!y cannot be nil';
-  ER_XY_SIZE_MISMATCH =
-    'Размерности X и y не согласованы!!X and y size mismatch';
-  ER_FEATURE_COUNT_MISMATCH =
-    'Число признаков не совпадает!!Feature count mismatch';
   ER_N_ESTIMATORS_NOT_POSITIVE =
     'Параметр nEstimators должен быть > 0!!nEstimators must be > 0';
   ER_LEARNING_RATE_NOT_POSITIVE =
@@ -2464,10 +2459,6 @@ const
     'maxDepth должен быть > 0!!maxDepth must be > 0';
   ER_SUBSAMPLE_INVALID =
     'subsample должен быть > 0!!subsample must be > 0'; 
-  ER_NAN_IN_Y =
-    'y содержит NaN!!y contains NaN';  
-  ER_NAN_IN_X =  
-    'x содержит NaN!!x contains NaN';  
   ER_K_EXCEEDS_SAMPLES =
     'k превышает число обучающих объектов!!k exceeds number of training samples';
   ER_MAX_DEPTH_TOO_LARGE =
@@ -2488,18 +2479,6 @@ const
   ER_ELASTICNET_INVALID_LOSS =
     'Функция потерь ElasticNet стала NaN или Infinity.' +
     'ElasticNet loss became NaN or Infinity.';
-  ER_TRAINING_DATA_CONTAINS_NAN =
-    'Обучающие данные содержат NaN. Обработайте пропуски до вызова Fit.!!' +
-    'Training data contains NaN. Please handle missing values before calling Fit.';
-  ER_TRAINING_DATA_CONTAINS_INF =
-    'Обучающие данные содержат Infinity. Проверьте данные на выбросы.!!' +
-    'Training data contains Infinity. Please check for extreme values.';
-  ER_PREDICTION_DATA_CONTAINS_NAN =
-    'Данные для предсказания содержат NaN. Обработайте пропуски до вызова Predict.!!' +
-    'Prediction data contains NaN. Please handle missing values before calling Predict.';
-  ER_PREDICTION_DATA_CONTAINS_INF =
-    'Данные для предсказания содержат Infinity. Проверьте данные на выбросы.!!' +
-    'Prediction data contains Infinity. Please check for extreme values.';  
   ER_MAXITER_INVALID =
     'maxIter должен быть положительным. Получено {0}.!!' +
     'maxIter must be positive. Received {0}.';
@@ -2598,8 +2577,6 @@ const
     'Model (type: {0}) is not an unsupervised model';
   ER_DBSCAN_PREDICT_ONLY_TRAIN_DATA =
     'DBSCAN: Predict поддерживается только для обучающей выборки!!DBSCAN: Predict is only supported for training data';  
-  ER_MODEL_NOT_FITTED =
-    'Модель "{0}" не обучена. Сначала вызовите Fit()|Model "{0}" is not fitted. Call Fit() first';
   ER_DBSCAN_PREDICT_NEW_DATA =
     'DBSCAN не поддерживает предсказание для новых данных!!DBSCAN does not support prediction for new data';
   ER_CLASSES_NOT_AVAILABLE =
@@ -2618,7 +2595,9 @@ const
   ER_UNKNOWN_CLASS_LABEL =
     'Неизвестная метка класса: {0}!!Unknown class label: {0}';
   ER_MAX_FEATURES_INVALID =
-    'maxFeatures должен быть >= 0!!maxFeatures must be >= 0';    
+    'maxFeatures должен быть >= 0!!maxFeatures must be >= 0';
+  ER_OOB_REQUIRES_SUBSAMPLE =
+    'Для OOB early stopping требуется subsample < 1.0!!OOB early stopping requires subsample < 1.0';    
     
 {$endregion ErrConstants}  
 
@@ -3526,7 +3505,6 @@ begin
   Result := res;
 end;
 
-
 function LeafClass(c: integer): DecisionTreeNode;
 begin
   var n := new DecisionTreeNode;
@@ -3582,6 +3560,7 @@ constructor DecisionTreeCore.Create(
   minSamplesSplit: integer;
   minSamplesLeaf: integer;
   criterion: ISplitCriterion;
+  classCount: integer;
   maxFeatures: integer;
   seed: integer
 );
@@ -3591,6 +3570,7 @@ begin
   fMinSamplesLeaf := minSamplesLeaf;
   fCriterion := criterion;
   fMaxFeatures := maxFeatures;
+  fClassCount := classCount;
 
   fRandomSeed := ResolveRandomSeed(seed, fUserProvidedSeed);
   fRng := new System.Random(fRandomSeed);
@@ -3782,7 +3762,7 @@ begin
   yr := y.SubvectorBy(rightArr);
 end;
 
-function DecisionTreeCore.FindBestSplit(
+{function DecisionTreeCore.FindBestSplit(
   X: Matrix;
   y: Vector;
   indices: array of integer;
@@ -3884,6 +3864,160 @@ begin
         bestScore := score;
         bestF := f;
         bestT := t;
+        Result := true;
+      end;
+    end;
+  end;
+end;}
+
+// Новая реализация (O(n log n · p))
+function DecisionTreeCore.FindBestSplit(
+  X: Matrix;
+  y: Vector;
+  indices: array of integer;
+  var bestF: integer;
+  var bestT: real
+): boolean;
+begin
+  Result := false;
+
+  var n := indices.Length;
+  if n < 2 then exit;
+
+  var parentImp := fCriterion.Impurity(y, indices);
+  var bestScore := parentImp;
+
+  var featureCount := X.ColCount;
+
+  // --- выбор признаков (как было)
+  var features: array of integer;
+
+  if (fMaxFeatures > 0) and (fMaxFeatures < featureCount) then
+  begin
+    var perm := new integer[featureCount];
+    for var i := 0 to featureCount - 1 do
+      perm[i] := i;
+
+    for var i := 0 to fMaxFeatures - 1 do
+    begin
+      var j := i + fRng.Next(featureCount - i);
+      var tmp := perm[i];
+      perm[i] := perm[j];
+      perm[j] := tmp;
+    end;
+
+    SetLength(features, fMaxFeatures);
+    for var i := 0 to fMaxFeatures - 1 do
+      features[i] := perm[i];
+  end
+  else
+  begin
+    SetLength(features, featureCount);
+    for var i := 0 to featureCount - 1 do
+      features[i] := i;
+  end;
+
+  // --- перебор признаков
+  for var fi := 0 to features.Length - 1 do
+  begin
+    var f := features[fi];
+
+    // пары (value, index)
+    var pairs: array of (real, integer);
+    SetLength(pairs, n);
+
+    for var i := 0 to n - 1 do
+    begin
+      var idx := indices[i];
+      pairs[i] := (X[idx, f], idx);
+    end;
+
+    pairs.Sort(p -> p.Item1);
+
+    // --- counts
+    var leftCounts := new integer[fClassCount];
+    var rightCounts := new integer[fClassCount];
+
+    for var i := 0 to n - 1 do
+      rightCounts[Round(y[pairs[i].Item2])] += 1;
+
+    var leftCount := 0;
+
+    // --- проход
+    for var i := 1 to n - 1 do
+    begin
+      var idx := pairs[i-1].Item2;
+      var cls := Round(y[idx]);
+
+      leftCounts[cls] += 1;
+      rightCounts[cls] -= 1;
+      leftCount += 1;
+
+      var rightCount := n - leftCount;
+
+      if (leftCount < fMinSamplesLeaf) or (rightCount < fMinSamplesLeaf) then
+        continue;
+
+      var x1 := pairs[i-1].Item1;
+      var x2 := pairs[i].Item1;
+
+      if x1 = x2 then
+        continue;
+
+      // --- impurity left
+      var leftImp := 0.0;
+      var rightImp := 0.0;
+
+      if fCriterion is GiniCriterion then
+      begin
+        var sumsqL := 0.0;
+        var sumsqR := 0.0;
+
+        for var c := 0 to fClassCount - 1 do
+        begin
+          if leftCounts[c] > 0 then
+          begin
+            var p := leftCounts[c] / leftCount;
+            sumsqL += p * p;
+          end;
+
+          if rightCounts[c] > 0 then
+          begin
+            var p := rightCounts[c] / rightCount;
+            sumsqR += p * p;
+          end;
+        end;
+
+        leftImp := 1.0 - sumsqL;
+        rightImp := 1.0 - sumsqR;
+      end
+      else
+      begin
+        // entropy
+        for var c := 0 to fClassCount - 1 do
+        begin
+          if leftCounts[c] > 0 then
+          begin
+            var p := leftCounts[c] / leftCount;
+            leftImp -= p * Ln(p);
+          end;
+
+          if rightCounts[c] > 0 then
+          begin
+            var p := rightCounts[c] / rightCount;
+            rightImp -= p * Ln(p);
+          end;
+        end;
+      end;
+
+      var score :=
+        (leftCount * leftImp + rightCount * rightImp) / n;
+
+      if score < bestScore then
+      begin
+        bestScore := score;
+        bestF := f;
+        bestT := (x1 + x2) * 0.5;
         Result := true;
       end;
     end;
@@ -4257,7 +4391,8 @@ begin
   fMaxDepth := maxDepth;
   fMinSamplesSplit := minSamplesSplit;
   fMinSamplesLeaf := minSamplesLeaf;
-  fCriterion := if criterion = nil then new GiniCriterion else criterion;
+  
+  fCriterion := criterion;
 
   fRandomSeed := ResolveRandomSeed(seed, fUserProvidedSeed);
   fRng := new System.Random(fRandomSeed);
@@ -4303,6 +4438,9 @@ begin
   // --- encode
   var classes: array of integer;
   var yEncArr := EncodeLabelsInt(yInt, classes);
+  
+  if fCriterion = nil then
+    fCriterion := new GiniCriterion(classes.Length);
 
   if classes.Length < 2 then
     ArgumentError(ER_NEED_AT_LEAST_TWO_CLASSES);
@@ -5575,6 +5713,10 @@ begin
     if XVal.ColCount <> XTrain.ColCount then
       DimensionError(ER_FEATURE_COUNT_MISMATCH);
   end;
+  
+  // --- OOB checks ---
+  if fUseOOBEarlyStopping and (fSubsample >= 1.0) then
+    ArgumentError(ER_OOB_REQUIRES_SUBSAMPLE);
 
   // --- init state ---
   fOOBLossHistory.Clear;
@@ -6735,7 +6877,7 @@ begin
     NotFittedError(ER_FIT_NOT_CALLED);
 
   if fFeatureImportances <> nil then
-    exit(fFeatureImportances);
+    exit(fFeatureImportances.Clone);
 
   var importances := new Vector(fFeatureCount);
 
@@ -6758,7 +6900,7 @@ begin
 
   fFeatureImportances := importances;
 
-  Result := fFeatureImportances;
+  Result := fFeatureImportances.Clone;
 end;
 
 function GradientBoostingClassifier.ToString: string;
@@ -7819,9 +7961,6 @@ begin
 
   var n := X.RowCount;
   var p := X.ColCount;
-
-  if n = 0 then
-    ArgumentError(ER_EMPTY_DATA, 'DBSCAN');
 
   fFeatureCount := p;
 

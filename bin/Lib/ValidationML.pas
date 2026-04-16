@@ -319,11 +319,12 @@ begin
     var cls := pair.Key;
     var cnt := pair.Value.Count;
 
-    if cnt < k then
-      ArgumentError(
-        ER_STRATIFIED_CLASS_TOO_SMALL,
-        cls, cnt, k
-      );
+    // Класс может иметь меньше объектов, чем число фолдов.
+    // В этом случае он не будет представлен во всех фолдах.
+    // Это допустимо, но может привести к ошибкам при обучении модели.
+ 
+    //if cnt < k then
+    //  ArgumentError(ER_STRATIFIED_CLASS_TOO_SMALL, cls, cnt, k);
   end;
 
   // --- 2. Контейнеры фолдов

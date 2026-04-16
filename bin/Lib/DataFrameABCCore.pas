@@ -109,8 +109,7 @@ type
   public
     constructor Create; begin end;
     constructor Create(name: string);
-    constructor Create(name: string; data: array of integer;
-      valid: array of boolean := nil);
+    constructor Create(name: string; values: array of integer; valid: array of boolean := nil);
     function TryGetNumericValue(i: integer; var value: real): boolean; override;
     /// Возвращает количество строк в столбце
     function RowCount: integer; override := Data.Length;
@@ -123,7 +122,7 @@ type
   public  
     constructor Create; begin end;
     constructor Create(name: string);
-    constructor Create(name: string; data: array of real;
+    constructor Create(name: string; values: array of real;
       valid: array of boolean := nil);
     function TryGetNumericValue(i: integer; var value: real): boolean; override;
     /// Возвращает количество строк в столбце
@@ -137,7 +136,7 @@ type
   public
     constructor Create; begin end;
     constructor Create(name: string);
-    constructor Create(name: string; data: array of string;
+    constructor Create(name: string; values: array of string;
       valid: array of boolean := nil);
     function TryGetNumericValue(i: integer; var value: real): boolean; override;
     /// Возвращает количество строк в столбце
@@ -155,7 +154,7 @@ type
   public  
     constructor Create; begin end;
     constructor Create(name: string);
-    constructor Create(name: string; data: array of boolean;
+    constructor Create(name: string; values: array of boolean;
       valid: array of boolean := nil);
     function TryGetNumericValue(i: integer; var value: real): boolean; override;
     /// Возвращает количество строк в столбце
@@ -564,13 +563,13 @@ end;
 //           Columns
 //-----------------------------
 
-constructor IntColumn.Create(name: string; data: array of integer; valid: array of boolean);
+constructor IntColumn.Create(name: string; values: array of integer; valid: array of boolean);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctInt);
 
-  var n := Length(data);
-  Data := if n = 0 then [] else data;
+  var n := Length(values);
+  Self.Data := if n = 0 then [] else values;
 
   if valid = nil then
     IsValid := [True] * n
@@ -588,8 +587,8 @@ begin
   inherited Create;
   Info := new ColumnInfo(name, ctInt);
 
-  Data := [];
-  IsValid := [];
+  Data := new integer[0];
+  IsValid := new boolean[0];
 end;
 
 function IntColumn.TryGetNumericValue(i: integer; var value: real): boolean;
@@ -601,13 +600,13 @@ begin
   exit(True);
 end;
 
-constructor FloatColumn.Create(name: string; data: array of real; valid: array of boolean);
+constructor FloatColumn.Create(name: string; values: array of real; valid: array of boolean);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctFloat);
 
-  var n := Length(data);
-  Data := if n = 0 then [] else data;
+  var n := Length(values);
+  Self.Data := if n = 0 then [] else values;
 
   if valid = nil then
     IsValid := [True] * n
@@ -625,8 +624,8 @@ begin
   inherited Create;
   Info := new ColumnInfo(name, ctFloat);
 
-  Data := [];
-  IsValid := [];
+  Data := new real[0];
+  IsValid := new boolean[0];
 end;
 
 function FloatColumn.TryGetNumericValue(i: integer; var value: real): boolean;
@@ -638,13 +637,13 @@ begin
   exit(True);
 end;
 
-constructor StrColumn.Create(name: string; data: array of string; valid: array of boolean);
+constructor StrColumn.Create(name: string; values: array of string; valid: array of boolean);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctStr);
 
-  var n := Length(data);
-  Data := if n = 0 then [] else data;
+  var n := Length(values);
+  Self.Data := if n = 0 then [] else values;
 
   if valid = nil then
     IsValid := [True] * n
@@ -662,8 +661,8 @@ begin
   inherited Create;
   Info := new ColumnInfo(name, ctStr);
 
-  Data := [];
-  IsValid := [];
+  Data := new string[0];
+  IsValid := new boolean[0];
 end;
 
 function StrColumn.TryGetNumericValue(i: integer; var value: real): boolean;
@@ -671,13 +670,13 @@ begin
   exit(False);
 end;
 
-constructor BoolColumn.Create(name: string; data: array of boolean; valid: array of boolean);
+constructor BoolColumn.Create(name: string; values: array of boolean; valid: array of boolean);
 begin
   inherited Create;
   Info := new ColumnInfo(name, ctBool);
 
-  var n := Length(data);
-  Data := if n = 0 then [] else data;
+  var n := Length(values);
+  Self.Data := if n = 0 then [] else values;
 
   if valid = nil then
     IsValid := [True] * n
@@ -695,8 +694,8 @@ begin
   inherited Create;
   Info := new ColumnInfo(name, ctBool);
 
-  Data := [];
-  IsValid := [];
+  Data := new boolean[0];
+  IsValid := new boolean[0];
 end;
 
 function BoolColumn.TryGetNumericValue(i: integer; var value: real): boolean;
