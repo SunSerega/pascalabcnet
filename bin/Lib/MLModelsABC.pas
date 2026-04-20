@@ -283,6 +283,8 @@ type
       fAlpha: real;
       fMaxIter: integer;
       fTol: real;
+      
+      function GetIsFitted: boolean;
     public
       /// Создаёт модель Lasso-регрессии.
       /// alpha — коэффициент L1-регуляризации.
@@ -326,7 +328,7 @@ type
       
       /// Показывает, была ли модель обучена.
       /// После вызова Fit значение становится True.
-      property IsFitted: boolean read fModel.fFitted;
+      property IsFitted: boolean read GetIsFitted;
       
       function Name: string := Self.GetType.Name;
     end;
@@ -557,8 +559,10 @@ type
     procedure Fit(X: Matrix; y: Vector);     // y уже 0..K-1
     function Predict(X: Matrix): Vector;     // возвращает 0..K-1
     function PredictRow(X: Matrix; row: integer): integer;
-
+    
   private
+    function GetFeatureImportances: Vector;
+
     function CreateLeaf(y: Vector; indices: array of integer): DecisionTreeNode;
 
     function BuildNode(X: Matrix; y: Vector; indices: array of integer; depth: integer): DecisionTreeNode;
@@ -573,9 +577,9 @@ type
       var Xr: Matrix; var yr: Vector
     );
     
-    property FeatureImportances: Vector read fFeatureImportances;
-
     function MajorityClass(y: Vector; indices: array of integer): integer;
+  public
+    property FeatureImportances: Vector read GetFeatureImportances;
 
     function PredictOne(x: Vector; node: DecisionTreeNode): integer;
     function Clone: DecisionTreeCore;
@@ -1566,6 +1570,9 @@ type
     fMark: array of integer;
     fTouched: array of integer;
     fEpoch: integer;
+    
+    fSampleIdx: array of integer;
+    fSampleSize: integer;
 
   public
     /// Создаёт классификатор kNN.
@@ -1675,7 +1682,6 @@ type
     fMaxIter: integer;
     fTol: real;
     fNInit: integer;
-    fSeed: integer;
 
     fFitted: boolean;
     fFeatureCount: integer;
@@ -1751,8 +1757,6 @@ type
     property Tol: real read fTol;
     /// Количество запусков алгоритма.
     property NInit: integer read fNInit;
-    /// Используемый seed.
-    property Seed: integer read fSeed;
     /// Матрица центроидов (k × p).
     property ClusterCenters: Matrix read fCenters;
     /// Значение инерции (сумма квадратов расстояний до центроидов).
@@ -2051,6 +2055,9 @@ type
   
     /// Применяет стандартизацию к данным.
     function Transform(X: Matrix): Matrix;
+    
+    /// Обратная операция к Transform.
+    function InverseTransform(X: Matrix): Matrix;
   
     /// Средние значения признаков, вычисленные при обучении.
     property Mean: Vector read fMean;
@@ -2106,6 +2113,9 @@ type
   
     /// Применяет линейное масштабирование признаков к диапазону [0, 1].
     function Transform(X: Matrix): Matrix;
+    
+    /// Преобразование, обратное Transform
+    function InverseTransform(X: Matrix): Matrix;
   
     /// Минимальные значения признаков, вычисленные при обучении.
     property Min: Vector read fMin;
@@ -2587,9 +2597,6 @@ const
   ER_INTERNAL_INVALID_MODEL_CLONE =
     'Внутренняя ошибка: Clone модели вернул несовместимый тип!!' +
     'Internal error: model Clone returned incompatible type';
-  ER_PREDICT_NOT_SUPPORTED =
-    'Модель не поддерживает Predict для данного типа алгоритма!!' +
-    'Model does not support Predict for this type of algorithm';  
   ER_NEED_AT_LEAST_TWO_CLASSES =
     'Необходимо как минимум два различных класса!!At least two distinct classes are required';  
   ER_UNKNOWN_CLASS_LABEL =
@@ -3084,6 +3091,10 @@ begin
   Result := new LassoRegression(fAlpha, fMaxIter, fTol);
 end;
 
+function LassoRegression.GetIsFitted: boolean;
+begin
+  Result := (fModel <> nil) and fModel.IsFitted;
+end;
 //-----------------------------
 //     LogisticRegression 
 //-----------------------------
@@ -3576,6 +3587,14 @@ begin
   fRng := new System.Random(fRandomSeed);
 end;
 
+function DecisionTreeCore.GetFeatureImportances: Vector;
+begin
+  if fRoot = nil then
+    NotFittedError(ER_FIT_NOT_CALLED);
+
+  Result := fFeatureImportances.Normalized;
+end;
+
 procedure DecisionTreeCore.Fit(X: Matrix; y: Vector);
 begin
   // --- init importance
@@ -3673,7 +3692,7 @@ end;
 function DecisionTreeCore.BuildNode(X: Matrix; y: Vector; indices: array of integer; depth: integer): DecisionTreeNode;
 begin
   // 1. stop: depth
-  if depth >= fMaxDepth then
+  if (fMaxDepth > 0) and (depth >= fMaxDepth) then
     exit(CreateLeaf(y, indices));
 
   // 2. stop: min samples
@@ -4061,7 +4080,7 @@ begin
   if minSamplesLeaf < 1 then
     ArgumentOutOfRangeError(ER_MIN_SAMPLES_LEAF_INVALID, minSamplesLeaf);
 
-  if minSamplesLeaf >= minSamplesSplit then
+  if 2 * minSamplesLeaf >= minSamplesSplit then
     ArgumentOutOfRangeError(
       ER_MIN_LEAF_GE_SPLIT,
       minSamplesLeaf, minSamplesSplit
@@ -5108,6 +5127,7 @@ begin
       fMinSamplesSplit,
       fMinSamplesLeaf,
       treeCriterion,
+      fClassCount,
       ComputeMaxFeatures(p),
       treeSeed
     );
@@ -5309,6 +5329,9 @@ function RandomForestClassifier.FeatureImportances: Vector;
 begin
   if not fFitted then
     NotFittedError(ER_FIT_NOT_CALLED);
+  
+  if fTrees.Length = 0 then
+    Error(ER_MODEL_NOT_INITIALIZED);
 
   var p := fTrees[0].FeatureImportances.Length;
   var resultVec := new Vector(p);
@@ -5318,7 +5341,7 @@ begin
 
   resultVec *= 1.0 / fTrees.Length;
 
-  Result := resultVec;
+  Result := resultVec.Normalized;
 end;
 
 function RandomForestClassifier.ToString: string;
@@ -5691,7 +5714,7 @@ begin
     ArgumentError(ER_EMPTY_DATASET);
 
   if XTrain.RowCount <> yTrain.Length then
-    DimensionError(ER_XY_SIZE_MISMATCH);
+    DimensionError(ER_XY_SIZE_MISMATCH,XTrain.RowCount,yTrain.Length);
 
   if useValidation then
   begin
@@ -7034,12 +7057,15 @@ begin
   var sum := 0.0;
   var d := fXTrain.ColCount;
 
+  var train := fXTrain;   // локальная ссылка
+  var test  := XTest;
+
   for var j := 0 to d - 1 do
   begin
-    var diff := fXTrain[trainRow, j] - XTest[testRow, j];
+    var diff := train.Data[trainRow, j] - test.Data[testRow, j];
     sum += diff * diff;
   end;
-
+  
   exit(sum);
 end;
 
@@ -7086,6 +7112,112 @@ begin
 end;
 
 //-----------------------------
+//        topK
+//-----------------------------
+
+type TopK = class
+private
+  fDist: array of real;
+  fIdx: array of integer;
+  fCount: integer;
+  fK: integer;
+  fWorstIdx: integer;
+
+  procedure UpdateWorst;
+
+public
+  constructor Create(k: integer);
+  procedure Clear;
+
+  function Count: integer;
+  function Worst: real;
+
+  procedure Add(d: real; id: integer);
+
+  function GetIndex(i: integer): integer;
+  function GetDist(i: integer): real;
+end;
+
+constructor TopK.Create(k: integer);
+begin
+  fK := k;
+  SetLength(fDist, k);
+  SetLength(fIdx, k);
+  fCount := 0;
+  fWorstIdx := 0;
+end;
+
+procedure TopK.Clear;
+begin
+  fCount := 0;
+  fWorstIdx := 0;
+end;
+
+function TopK.Count: integer;
+begin
+  Result := fCount;
+end;
+
+function TopK.Worst: real;
+begin
+  if fCount < fK then
+    Result := real.PositiveInfinity
+  else
+    Result := fDist[fWorstIdx];
+end;
+
+procedure TopK.UpdateWorst;
+begin
+  var wi := 0;
+  var wd := fDist[0];
+
+  for var i := 1 to fCount - 1 do
+    if fDist[i] > wd then
+    begin
+      wd := fDist[i];
+      wi := i;
+    end;
+
+  fWorstIdx := wi;
+end;
+
+procedure TopK.Add(d: real; id: integer);
+begin
+  // ещё не заполнено
+  if fCount < fK then
+  begin
+    fDist[fCount] := d;
+    fIdx[fCount] := id;
+    fCount += 1;
+
+    if fCount = fK then
+      UpdateWorst;
+
+    exit;
+  end;
+
+  // быстрый отсев
+  if d >= fDist[fWorstIdx] then
+    exit;
+
+  // замена худшего
+  fDist[fWorstIdx] := d;
+  fIdx[fWorstIdx] := id;
+
+  UpdateWorst;
+end;
+
+function TopK.GetIndex(i: integer): integer;
+begin
+  Result := fIdx[i];
+end;
+
+function TopK.GetDist(i: integer): real;
+begin
+  Result := fDist[i];
+end;
+
+//-----------------------------
 //        KNNClassifier 
 //-----------------------------
 
@@ -7123,6 +7255,15 @@ begin
 
   // --- copy train data
   fXTrain := X.Clone;
+  
+  fSampleSize := Min(3000, fXTrain.RowCount); // попробуй 2000–4000
+
+  SetLength(fSampleIdx, fSampleSize);
+  
+  var rnd := new System.Random(42);
+  
+  for var i := 0 to fSampleSize - 1 do
+    fSampleIdx[i] := rnd.Next(fXTrain.RowCount);
 
   // =========================================================
   // ЕДИНЫЙ ENCODING
@@ -7197,15 +7338,36 @@ begin
 
   var m := X.RowCount;
   var n := fXTrain.RowCount;
+  var p := fXTrain.ColCount;
+  
+  var trainRows := fXTrain.Data.Rows;
+  var testRows  := X.Data.Rows;
 
   Result := new Vector(m);
 
   for var i := 0 to m - 1 do
   begin
     // заполнить расстояния
+  //  for var t := 0 to n - 1 do
+  //  begin
+  //    fNeighbors[t].dist := SquaredL2(t, X, i);
+  //    fNeighbors[t].idx := t;
+  //  end;
+    
+    var rowTest := testRows[i];
     for var t := 0 to n - 1 do
-    begin
-      fNeighbors[t].dist := SquaredL2(t, X, i);
+    begin      
+      var rowTrain := trainRows[t];
+      
+      var sum := 0.0;
+    
+      for var j := 0 to p - 1 do
+      begin
+        var diff := rowTrain[j] - rowTest[j];
+        sum += diff * diff;
+      end;
+    
+      fNeighbors[t].dist := sum;
       fNeighbors[t].idx := t;
     end;
 
@@ -7652,18 +7814,70 @@ begin
   var p := X.ColCount;
   var k := fNClusters;
 
-  // --- 1. Инициализация центроидов (случайные строки X)
-
-  var idx := Arr(0..n-1);
-  idx.Shuffle(rnd);
+  // --- 1. K-Means++ инициализация
 
   var centers := new Matrix(k, p);
-
-  for var c := 0 to k - 1 do
+  
+  // первый центр — случайный
+  var first := rnd.Next(n);
+  for var j := 0 to p - 1 do
+    centers[0,j] := X[first,j];
+  
+  // расстояния до ближайшего центра
+  var dist1 := new real[n];
+  
+  for var i := 0 to n - 1 do
+    dist1[i] := double.MaxValue;
+  
+  // выбираем остальные центры
+  for var c := 1 to k - 1 do
   begin
-    var r := idx[c];
+    // обновляем dist (минимальное расстояние до уже выбранных центров)
+    for var i := 0 to n - 1 do
+    begin
+      var d := 0.0;
+  
+      for var j := 0 to p - 1 do
+      begin
+        var diff := X[i,j] - centers[c-1,j];
+        d += diff * diff;
+      end;
+  
+      if d < dist1[i] then
+        dist1[i] := d;
+    end;
+  
+    // сумма расстояний
+    var sumDist := 0.0;
+    for var i := 0 to n - 1 do
+      sumDist += dist1[i];
+  
+    // если всё совпало (редкий случай)
+    if sumDist = 0 then
+    begin
+      var r := rnd.Next(n);
+      for var j := 0 to p - 1 do
+        centers[c,j] := X[r,j];
+      continue;
+    end;
+  
+    // выбор по вероятности
+    var target := rnd.NextDouble * sumDist;
+    var acc := 0.0;
+    var chosen := n - 1;
+  
+    for var i := 0 to n - 1 do
+    begin
+      acc += dist1[i];
+      if acc >= target then
+      begin
+        chosen := i;
+        break;
+      end;
+    end;
+  
     for var j := 0 to p - 1 do
-      centers[c,j] := X[r,j];
+      centers[c,j] := X[chosen,j];
   end;
 
   var inertia := 0.0;
@@ -8489,7 +8703,34 @@ begin
 
   for var i := 0 to n - 1 do
     for var j := 0 to p - 1 do
-      Result[i,j] := (X[i,j] - fMean[j]) / fStd[j];
+      if fStd[j] <> 0 then
+        Result[i,j] := (X[i,j] - fMean[j]) / fStd[j]
+      else
+        Result[i,j] := 0.0;
+end;
+
+function StandardScaler.InverseTransform(X: Matrix): Matrix;
+begin
+  if not fFitted then
+    NotFittedError(ER_FIT_NOT_CALLED);
+
+  if X = nil then
+    ArgumentNullError(ER_X_NULL);
+
+  if X.ColCount <> fFeatureCount then
+    DimensionError(ER_FEATURE_COUNT_MISMATCH);
+
+  var n := X.RowCount;
+  var p := X.ColCount;
+
+  Result := new Matrix(n, p);
+
+  for var i := 0 to n - 1 do
+    for var j := 0 to p - 1 do
+      if fStd[j] <> 0 then
+        Result[i,j] := X[i,j] * fStd[j] + fMean[j]
+      else
+        Result[i,j] := fMean[j];
 end;
 
 function StandardScaler.ToString: string;
@@ -8575,6 +8816,34 @@ begin
           fRangeMin + (X[i,j] - minVal) / denom * scale;
     end;
   end;
+end;
+
+function MinMaxScaler.InverseTransform(X: Matrix): Matrix;
+begin
+  if not fFitted then
+    NotFittedError(ER_FIT_NOT_CALLED);
+
+  if X = nil then
+    ArgumentNullError(ER_X_NULL);
+
+  if X.ColCount <> fFeatureCount then
+    DimensionError(ER_FEATURE_COUNT_MISMATCH);
+
+  var n := X.RowCount;
+  var p := X.ColCount;
+
+  Result := new Matrix(n, p);
+
+  for var i := 0 to n - 1 do
+    for var j := 0 to p - 1 do
+    begin
+      var range := fMax[j] - fMin[j];
+
+      if range <> 0 then
+        Result[i,j] := X[i,j] * range + fMin[j]
+      else
+        Result[i,j] := fMin[j];
+    end;
 end;
 
 function MinMaxScaler.ToString: string;

@@ -30,7 +30,7 @@ const
   ER_Y_NULL =
     'y не может быть nil!!y cannot be nil';
   ER_XY_SIZE_MISMATCH =
-    'Размерности X и y не согласованы!!X and y size mismatch';
+    'Размеры X и y не совпадают: X={0}, y={1}!!X and y size mismatch: X={0}, y={1}';
   ER_FEATURE_COUNT_MISMATCH =
     'Число признаков не совпадает!!Feature count mismatch';
   ER_NAN_IN_X =  
@@ -50,8 +50,13 @@ const
     'Данные для предсказания содержат Infinity. Проверьте данные на выбросы.!!' +
     'Prediction data contains Infinity. Please check for extreme values.';  
   ER_MODEL_NOT_FITTED =
-    'Модель "{0}" не обучена. Сначала вызовите Fit()|Model "{0}" is not fitted. Call Fit() first';
-    
+    'Модель "{0}" не обучена. Сначала вызовите Fit()!!Model "{0}" is not fitted. Call Fit() first';
+  ER_TEST_RATIO_INVALID =
+    'Параметр testRatio должен быть в интервале (0,1), получено {0}!!' +
+    'Parameter testRatio must be in (0,1), got {0}';
+  ER_PREDICT_NOT_SUPPORTED =
+    'Модель не поддерживает операцию Predict!!' +
+    'Model does not support Predict operation';
   
 type
   /// Базовое исключение ML-библиотеки

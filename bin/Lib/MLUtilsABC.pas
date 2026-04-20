@@ -63,6 +63,13 @@ function EncodeLabelsInt(labels: array of integer; var classes: array of integer
 /// Используется для применения кодирования к тестовым данным (Transform).
 function TransformLabels(labels: array of string; classes: array of string): array of integer;
 
+/// Преобразует целочисленные метки классов в индексы (0,1,2,...)
+/// с использованием заранее заданного массива classes (mapping: индекс → значение).
+/// classes должен быть получен из EncodeLabelsInt.
+/// Если встречается неизвестное значение — выбрасывается исключение.
+/// Используется для применения кодирования к тестовым данным (Transform).
+function TransformLabelsInt(labels: array of integer; classes: array of integer): array of integer;
+
 /// Преобразует целочисленные индексы классов обратно в строковые метки.
 /// Массив classes задаёт соответствие: classes[i] — имя класса с индексом i.
 /// Используется для получения текстовых предсказаний моделей.
@@ -72,6 +79,11 @@ function DecodeLabels(y: array of integer; classes: array of string): array of s
 /// Порядок соответствует первому появлению значений во входном массиве.
 /// Используется для определения множества классов в задаче классификации.
 function UniqueLabels(labels: array of string): array of string;
+
+function CloneOrNil(v: Vector): Vector;
+
+procedure CheckSameLength(a, b: Vector);
+
 
 implementation
 
@@ -173,6 +185,34 @@ begin
   Result := res;
 end;
 
+function TransformLabelsInt(labels: array of integer; classes: array of integer): array of integer;
+begin
+  if labels = nil then
+    ArgumentNullError(ER_ARG_NULL, 'labels');
+
+  if classes = nil then
+    ArgumentNullError(ER_ARG_NULL, 'classes');
+
+  // mapping: значение → индекс
+  var map := new Dictionary<integer, integer>;
+  for var i := 0 to classes.Length - 1 do
+    map[classes[i]] := i;
+
+  var res := new integer[labels.Length];
+
+  for var i := 0 to labels.Length - 1 do
+  begin
+    var v := labels[i];
+
+    if not map.ContainsKey(v) then
+      Error(ER_UNKNOWN_CLASS_IN_TRANSFORM, v);
+
+    res[i] := map[v];
+  end;
+
+  Result := res;
+end;
+
 function EncodeLabels(labels: array of string): array of integer;
 begin
   var classes: array of string;
@@ -227,6 +267,19 @@ end;
 function UniqueLabels(labels: array of string): array of string;
 begin
   Result := labels.Distinct.ToArray;
+end;
+
+function CloneOrNil(v: Vector): Vector;
+begin
+  if v = nil then
+    exit(nil);
+  Result := v.Clone;
+end;
+
+procedure CheckSameLength(a, b: Vector);
+begin
+  if a.Length <> b.Length then
+    DimensionError(ER_DIM_MISMATCH, a.Length, b.Length);
 end;
 
 end.

@@ -223,6 +223,10 @@ type
   /// Поддерживает как бинарную, так и многоклассовую классификацию.
   /// Для бинарной классификации дополнительно доступны
   /// агрегированные показатели: TP, TN, FP, FN.
+  ///
+  /// Ожидается, что yTrue и yPred содержат закодированные метки классов
+  /// (целые значения 0..K-1, допускается хранение в Vector типа real).
+  /// Для строковых меток необходимо предварительно применить EncodeLabels
   ConfusionMatrix = class
   private
     fMatrix: array[,] of integer;
@@ -579,6 +583,7 @@ type
 implementation  
 
 uses MLExceptions;
+uses MLUtilsABC;
 
 const
   ER_INVALID_VALUE =
@@ -1672,6 +1677,102 @@ end;
 /// через таблицу сопряжённости (contingency table) с асимптотикой O(n · k)
 static function Metrics.AdjustedRandIndex(yTrue, yPred: Vector): real;
 begin
+  if yTrue = nil then
+    ArgumentNullError(ER_Y_NULL);
+
+  if yPred = nil then
+    ArgumentNullError(ER_Y_NULL);
+
+  var n := yTrue.Length;
+  if n <> yPred.Length then
+    DimensionError(ER_DIM_MISMATCH, yTrue.Length, yPred.Length);
+
+  if n < 2 then
+  begin
+    Result := 1.0;
+    exit;
+  end;
+
+  // --- Vector -> int[]
+  var yTInt := new integer[n];
+  var yPInt := new integer[n];
+
+  for var i := 0 to n - 1 do
+  begin
+    yTInt[i] := Round(yTrue[i]);
+    yPInt[i] := Round(yPred[i]);
+  end;
+
+  // --- encoding
+  var classesTrue: array of integer;
+  var classesPred: array of integer;
+
+  var yT := EncodeLabelsInt(yTInt, classesTrue);
+  var yP := EncodeLabelsInt(yPInt, classesPred);
+
+  var kT := classesTrue.Length;
+  var kP := classesPred.Length;
+
+  // --- contingency
+  var table := new integer[kT, kP];
+
+  for var i := 0 to n - 1 do
+    table[yT[i], yP[i]] += 1;
+
+  // --- sums
+  var sumNij := 0.0;
+  var sumAi := 0.0;
+  var sumBj := 0.0;
+
+  // n_ij
+  for var i := 0 to kT - 1 do
+    for var j := 0 to kP - 1 do
+    begin
+      var x := table[i,j];
+      if x >= 2 then
+        sumNij += x * (x - 1) / 2.0;
+    end;
+
+  // a_i
+  for var i := 0 to kT - 1 do
+  begin
+    var s := 0;
+    for var j := 0 to kP - 1 do
+      s += table[i,j];
+
+    if s >= 2 then
+      sumAi += s * (s - 1) / 2.0;
+  end;
+
+  // b_j
+  for var j := 0 to kP - 1 do
+  begin
+    var s := 0;
+    for var i := 0 to kT - 1 do
+      s += table[i,j];
+
+    if s >= 2 then
+      sumBj += s * (s - 1) / 2.0;
+  end;
+
+  var total := n * (n - 1) / 2.0;
+
+  var expected := (sumAi * sumBj) / total;
+  var maxIndex := 0.5 * (sumAi + sumBj);
+
+  var denom := maxIndex - expected;
+
+  if denom = 0 then
+  begin
+    Result := 0.0;
+    exit;
+  end;
+
+  Result := (sumNij - expected) / denom;
+end;
+
+{static function Metrics.AdjustedRandIndex(yTrue, yPred: Vector): real;
+begin
   if yTrue.Length <> yPred.Length then
     DimensionError(ER_DIM_MISMATCH, yTrue.Length, yPred.Length);
 
@@ -1718,7 +1819,7 @@ begin
     else
       Result := (ri - expected) / (1 - expected);
   end;
-end;
+end;}
 
 function R(s: string; w: integer): string;
 begin

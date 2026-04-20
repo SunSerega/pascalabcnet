@@ -6464,9 +6464,6 @@ static function CSVLoader.Load(filename: string;
 begin
   var enc := encoding;
   
-  //if enc = nil then
-  //  enc := System.Text.Encoding.Utf8;
-  
   if enc = nil then
     enc := DetectEncoding(filename);
   

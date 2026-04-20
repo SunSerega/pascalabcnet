@@ -295,10 +295,10 @@ const
   ER_PARAM_BETWEEN_01 =
     'Параметр {0} должен быть в диапазоне (0,1)!!Parameter {0} must be in range (0,1)';
   ER_DATASET_NO_TARGET =
-    'У датасета нет целевой переменной (задача кластеризации).' +
+    'У датасета нет целевой переменной (задача кластеризации).!!' +
     'Dataset has no target variable (clustering task).';
   ER_DATASET_TARGET_NOT_FOUND =
-    'Целевая переменная "{0}" не найдена в таблице.' +
+    'Целевая переменная "{0}" не найдена в таблице.!!' +
     'Target column "{0}" not found in DataFrame';
   ER_DATASET_META_NOT_FOUND =
     'Файл метаданных датасета "{0}" не найден!!Dataset meta file "{0}" not found';
@@ -324,8 +324,6 @@ const
     'Параметр {0} должен быть в диапазоне (0, 1)!!Parameter {0} must be in range (0, 1)';   
   ER_PARAM_LT =
     'Параметр {0} должен быть меньше допустимого значения!!Parameter {0} must be less than allowed value';    
-  ER_TEST_RATIO_INVALID = 
-    'Некорректное значение testRatio (должно быть между 0 и 1)!!Invalid testRatio (must be between 0 and 1)';
   ER_GROUPBY_UNSUPPORTED_KEY_TYPE = 
     'Неподдерживаемый тип ключа для группировки!!Unsupported key type for grouping';
   ER_STRATIFIED_ONLY_FOR_CLASSIFICATION =
@@ -334,7 +332,9 @@ const
     'Слишком малое значение classBalance: {0}. Минимально допустимое значение — 1e-3!!classBalance is too small: {0}. Minimum allowed value is 1e-3';
   ER_UNSUPPORTED_TARGET_TYPE =
     'Неподдерживаемый тип целевого столбца: {0}!!Unsupported target column type: {0}';    
-    
+  ER_ENCODELABELS_UNSUPPORTED_TYPE =
+    'Неподдерживаемый тип столбца для кодирования меток: {0}!!' +
+    'Unsupported column type for label encoding: {0}';  
   
   C_DATASET      = 'Датасет: {0}!!Dataset: {0}';
   C_DESCRIPTION  = 'Описание:!!Description:';
@@ -613,15 +613,39 @@ begin
   if Task <> TaskType.Classification then
     ArgumentError(ER_VALUECOUNTS_ONLY_CLASSIFICATION);
 
-  var labels := Data.GetStrColumn(Target);
-
   var dict := new Dictionary<string,integer>;
 
-  foreach var v in labels do
-    if dict.ContainsKey(v) then
-      dict[v] += 1
+  case Data.GetColumnType(Target) of
+
+    ColumnType.ctStr:
+      begin
+        var labels := Data.GetStrColumn(Target);
+
+        foreach var v in labels do
+          if dict.ContainsKey(v) then
+            dict[v] += 1
+          else
+            dict[v] := 1;
+      end;
+
+    ColumnType.ctInt:
+      begin
+        var labels := Data.GetIntColumn(Target);
+
+        foreach var v in labels do
+        begin
+          var s := v.ToString;
+
+          if dict.ContainsKey(s) then
+            dict[s] += 1
+          else
+            dict[s] := 1;
+        end;
+      end;
+
     else
-      dict[v] := 1;
+      ArgumentError(ER_ENCODELABELS_UNSUPPORTED_TYPE, Target);
+  end;
 
   Result := dict;
 end;
@@ -879,7 +903,7 @@ begin
     ArgumentOutOfRangeError(ER_PARAM_GE_ZERO, 'nInformative');
   
   if nInformative > nFeatures then
-    nInformative := nFeatures;
+    ArgumentOutOfRangeError(ER_PARAM_LE, 'nInformative');
   
   if noise < 0 then
     ArgumentOutOfRangeError(ER_PARAM_GE_ZERO, 'noise');
@@ -1065,7 +1089,26 @@ begin
       X[row,1] := r * Sin(t) + noise * Normal(rnd);
     end;
   end;
-
+  
+  // --- обработка хвоста (если n не делится на classes)
+  for var i := classes * perClass to n - 1 do
+  begin
+    var row := idx[i];
+  
+    var c := i mod classes;  // равномернее, чем rnd
+  
+    var u := rnd.NextDouble;
+  
+    var r := radius * u;
+  
+    var t := turns * 2 * Pi * u + c * 2 * Pi / classes + noise * 0.5 * Normal(rnd);
+  
+    y[row] := c;
+  
+    X[row,0] := r * Cos(t) + noise * Normal(rnd);
+    X[row,1] := r * Sin(t) + noise * Normal(rnd);
+  end;
+  
   Result := (X, y);
 end;
 

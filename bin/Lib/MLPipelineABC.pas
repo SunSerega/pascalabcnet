@@ -137,14 +137,7 @@ type
   /// (Fit/Transform/FitTransform)
   UDataPipeline = class(PipelineBase, IModel)
   private
-    //fDataSteps: List<IPreprocessor>;
-    //fMatrixSteps: List<ITransformer>;
     fModel: IUnsupervisedModel;
-  
-    //fFeatures: array of string;
-    //fFinalFeatures: array of string;
-  
-    //fFitted: boolean;
   
     procedure ValidateNumericFeatures(df: DataFrame);
     function TransformToMatrix(df: DataFrame): Matrix;
@@ -226,9 +219,6 @@ const
     'Матричный шаг не может идти после модели!!Matrix step cannot appear after the model';
   ER_DATAPIPE_UNKNOWN_STEP_TYPE =
     'Неизвестный тип шага конвейера: {0}!!Unknown pipeline step type: {0}';
-  
-  ER_TO_MATRIX_NO_COLUMNS =
-    'ToMatrix: не указаны столбцы!!ToMatrix: no columns specified';
   ER_TO_VECTOR_NON_NUMERIC =
     'ToVector: столбец "{0}" содержит нечисловые или NA значения!!' +
     'ToVector: column "{0}" contains non-numeric or NA values';  
@@ -267,9 +257,6 @@ const
   ER_MODEL_NOT_SUPERVISED =
     'Модель (тип: {0}) не поддерживает Fit(X, y)!!' +
     'Model (type: {0}) does not support Fit(X, y)';
-  ER_XY_SIZE_MISMATCH =
-    'Несовпадение размеров X и y: X имеет {0} строк, y имеет {1} элементов!!' +
-    'X and y size mismatch: X has {0} rows, y has {1} elements';
   ER_PIPELINE_FEATURE_NOT_FOUND =
     'Признак "{0}" отсутствует во входных данных!!' +
     'Feature "{0}" not found in input data';
@@ -294,9 +281,6 @@ const
   ER_DATAPIPE_INVALID_TASK =
     'DataPipeline поддерживает только классификацию и регрессию!!' +
     'DataPipeline supports classification and regression only';  
-  ER_PREDICT_NOT_SUPPORTED =
-    'Модель не поддерживает операцию Predict!!' +
-    'Model does not support Predict operation';
   ER_PIPELINE_NO_STEPS =
     'Pipeline не содержит шагов!!' +
     'Pipeline must contain at least one step';  
@@ -561,74 +545,31 @@ begin
   if fModel = nil then
     ArgumentError(ER_MODEL_NULL);
 
-  var current := df;
+  var current: DataFrame;
+  var X := PrepareMatrix(df, current);
 
-  // --- 0) Проверка входной схемы
-  ValidateSchema(current);
-
-  // --- 1) DataFrame шаги
-  for var i := 0 to fDataSteps.Count - 1 do
-  begin
-    fDataSteps[i] := fDataSteps[i].Fit(current);
-    current := fDataSteps[i].Transform(current);
-  end;
-
-  // --- target должен остаться
   if not current.HasColumn(fTarget) then
     ArgumentError(ER_PIPELINE_TARGET_REMOVED, fTarget);
 
-  // --- 2) вычислить финальные признаки
-  var feats := new List<string>;
-
-  foreach var f in fFeatures do
-  begin
-    if current.HasColumn(f) then
-    begin
-      feats.Add(f);
-      continue;
-    end;
-
-    // искать производные признаки (OneHotEncoder)
-    foreach var c in current.Schema.ColumnNames do
-      if c.StartsWith(f + '_') then
-        if not feats.Contains(c) then
-          feats.Add(c);
-  end;
-
-  if feats.Count = 0 then
-    ArgumentError(ER_PIPELINE_NO_FEATURES);
-
-  // fFinalFeatures — признаки DataFrame (ДО matrix-transform)
-  // После FitTransformMatrix пространство признаков меняется (PCA и т.п.),
-  // но fFinalFeatures используется только для ToMatrix в Predict.
-  
-  fFinalFeatures := feats.ToArray;
-
-  var X := current.ToMatrix(fFinalFeatures);
-  
   var classes: array of string;  
   var y: Vector;
-  
+
   case fTask of
     tkRegression:
       y := current.ToVector(fTarget);
-  
+
     tkClassification:
       begin
         var labels := current.EncodeLabels(fTarget, classes);
         y := new Vector(labels);
       end;
   end;
-  
+
   if X.RowCount <> y.Length then
     DimensionError(ER_XY_SIZE_MISMATCH, X.RowCount, y.Length);
 
-  // --- 3) Matrix transformers
   X := FitTransformMatrix(X, y);
-  // После этого X уже не соответствует fFinalFeatures по размерности,
-  // но это нормально: fFinalFeatures используется только до ToMatrix.
 
-  // --- 4) модель
   fModel := fModel.Fit(X, y);
 
   if fTask = tkClassification then
@@ -949,47 +890,11 @@ begin
   if fModel = nil then
     ArgumentError(ER_MODEL_NULL);
 
-  var current := df;
+  var current: DataFrame;
+  var X := PrepareMatrix(df, current);
 
-  // --- 0) Проверка входной схемы
-  ValidateSchema(current);
-
-  // --- 1) DataFrame шаги
-  for var i := 0 to fDataSteps.Count - 1 do
-  begin
-    fDataSteps[i] := fDataSteps[i].Fit(current);
-    current := fDataSteps[i].Transform(current);
-  end;
-
-  // --- 2) вычислить финальные признаки
-  var feats := new List<string>;
-
-  foreach var f in fFeatures do
-  begin
-    if current.HasColumn(f) then
-    begin
-      feats.Add(f);
-      continue;
-    end;
-
-    // искать производные признаки (OneHotEncoder)
-    foreach var c in current.Schema.ColumnNames do
-      if c.StartsWith(f + '_') then
-        if not feats.Contains(c) then
-          feats.Add(c);
-  end;
-
-  if feats.Count = 0 then
-    ArgumentError(ER_PIPELINE_NO_FEATURES);
-
-  fFinalFeatures := feats.ToArray;
-
-  var X := current.ToMatrix(fFinalFeatures);
-
-  // --- 3) Matrix transformers
   X := FitTransformMatrix(X);
 
-  // --- 4) модель
   fModel := fModel.Fit(X);
 
   fFitted := true;

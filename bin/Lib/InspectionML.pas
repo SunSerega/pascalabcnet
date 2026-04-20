@@ -90,11 +90,6 @@ begin
 
   var resultVec := new Vector(p);
 
-// Базовый seed для всех параметров.
-// Все модели оцениваются на одинаковых фолдах,
-// что обеспечивает корректное сравнение.
-// При seed = -1 разбиение случайное, но фиксируется
-// один раз для всего GridSearch.
   var baseSeed :=
     if seed >= 0 then seed
     else System.Environment.TickCount and integer.MaxValue;

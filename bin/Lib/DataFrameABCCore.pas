@@ -72,7 +72,10 @@ type
       rightPrefix: string
     ): DataFrameSchema;
 
-    { --- debug --- }
+    { --- DEBUG ONLY ---
+    Проверка внутренних инвариантов схемы.
+    Использует Assert и выполняется только в debug-сборке.
+    Не предназначена для обработки пользовательских ошибок. }
     procedure AssertConsistent;
   end;
   

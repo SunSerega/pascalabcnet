@@ -42,6 +42,9 @@ type
     /// metric — функция качества, принимающая (y_true, y_pred)
     ///   и возвращающая значение метрики (например, Accuracy или MSE).
     /// Возвращает среднее значение метрики по всем частям.
+    /// 
+    /// Метод принимает только ISupervisedModel, работающие с матричными данными
+    /// DataPipeline сюда передавать нельзя, так как он работает с DataFrame.
     static function CrossValidate(model: ISupervisedModel; X: Matrix; y: Vector;
       k: integer; metric: (Vector,Vector) -> real; seed: integer := -1): real;
     
@@ -50,6 +53,9 @@ type
     ///     с сохранением пропорций классов в каждой части.
     /// Рекомендуется для задач классификации, особенно при несбалансированных классах.
     /// Возвращает среднее значение метрики по k разбиениям.
+    /// 
+    /// Метод принимает только ISupervisedModel, работающие с матричными данными
+    /// DataPipeline сюда передавать нельзя, так как он работает с DataFrame.
     static function StratifiedCrossValidate(model: ISupervisedModel; X: Matrix; y: Vector;
       k: integer; metric: (Vector,Vector) -> real; seed: integer := -1): real;  
   end;
@@ -92,9 +98,6 @@ const
   ER_DIM_MISMATCH_TRAIN_TEST =
     'Несоответствие размерностей в TrainTestSplit: X.RowCount={0}, y.Length={1}!!' +
     'Dimension mismatch in TrainTestSplit: X.RowCount={0}, y.Length={1}';
-  ER_TEST_RATIO_INVALID =
-    'Параметр testRatio должен быть в интервале (0,1), получено {0}!!' +
-    'Parameter testRatio must be in (0,1), got {0}';  
   ER_K_INVALID =
     'Некорректное значение k в KFold: k={0}, n={1}!!' +
     'Invalid k in KFold: k={0}, n={1}';  

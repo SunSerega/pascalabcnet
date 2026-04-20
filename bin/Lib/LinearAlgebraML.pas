@@ -39,6 +39,9 @@ type
     
     function Clone: Vector;
     
+    function Normalize: Vector;
+    function Normalized: Vector;
+    
     function ToArray: array of real;
     function ToIntArray: array of integer;
     
@@ -69,7 +72,9 @@ type
     
     // ---------- Основные методы ----------
     function Sum: real;
+    /// Среднее. Синоним Mean
     function Average: real;
+    /// Среднее
     function Mean: real;
     function Norm2: real;
     function Norm: real;
@@ -295,8 +300,6 @@ const
     'Вектор пуст!!Vector is empty';
   ER_VECTOR_DIVIDE_BY_ZERO =
     'Деление на ноль при делении вектора на скаляр!!Division by zero in Vector / scalar';
-  ER_DIM_MISMATCH =
-    'Несоответствие размерностей: {0} и {1}!!Dimension mismatch: {0} and {1}';
   ER_MATRIX_SIZE_NEGATIVE =
     'Размеры матрицы должны быть неотрицательными!!Matrix size must be non-negative';
   ER_MATRIX_SIZE_MISMATCH =
@@ -384,6 +387,25 @@ begin
   Result := new Vector(fdata);
 end;
 
+function Vector.Normalize: Vector;
+begin
+  var sum := 0.0;
+  for var i := 0 to Length - 1 do
+    sum += Self[i];
+
+  if sum > 0 then
+    for var i := 0 to Length - 1 do
+      Self[i] /= sum;
+
+  Result := Self;
+end;
+
+function Vector.Normalized: Vector;
+begin
+  Result := Self.Clone;
+  Result.Normalize;
+end;
+
 static procedure Vector.CheckSameLength(a, b: Vector);
 begin
   if a.Length <> b.Length then
@@ -428,6 +450,7 @@ static function Vector.operator /(v: Vector; alpha: real): Vector;
 begin
   if alpha = 0.0 then
     raise new System.DivideByZeroException(GetTranslation(ER_VECTOR_DIVIDE_BY_ZERO));
+  
   Result := new Vector(v.Length);
   var inv := 1.0 / alpha;
   for var i := 0 to v.Length - 1 do
@@ -479,12 +502,10 @@ begin
   Result := s;
 end;
 
+// Алиас Mean
 function Vector.Average: real;
 begin
-  if Length = 0 then
-    ArgumentError(ER_VECTOR_EMPTY);
-
-  Result := Sum / Length;
+  Result := Mean;
 end;
 
 function Vector.Mean: real;
@@ -541,6 +562,7 @@ constructor Matrix.Create(r, c: integer);
 begin
   if (r < 0) or (c < 0) then
     ArgumentOutOfRangeError(ER_MATRIX_SIZE_NEGATIVE);
+  
   fdata := new real[r, c];
 end;
 
@@ -580,8 +602,10 @@ end;
 function Matrix.ColumnMeans: Vector;
 begin
   var n := RowCount;
-  if n = 0 then 
-    exit( new Vector(ColCount) );
+
+  if n = 0 then
+    Error(ER_EMPTY_MATRIX);
+
   Result := ColumnSums / n;
 end;
 
@@ -598,20 +622,28 @@ end;
 
 function Matrix.RowMeans: Vector;
 begin
+  var n := RowCount;
   var p := ColCount;
+
+  if n = 0 then
+    Error(ER_EMPTY_MATRIX);
+
   if p = 0 then
-    exit (new Vector(RowCount));
+    Error(ER_EMPTY_MATRIX);
+
   Result := RowSums / p;
 end;
 
 function Matrix.ColumnVariances: Vector;
 begin
   var n := RowCount;
+
   if n = 0 then
-    exit (new Vector(ColCount));
+    Error(ER_EMPTY_MATRIX);
 
   var means := ColumnMeans;
   var p := ColCount;
+
   Result := new Vector(p);
 
   for var j := 0 to p - 1 do
@@ -631,12 +663,17 @@ end;
 
 function Matrix.RowVariances: Vector;
 begin
+  var n := RowCount;
   var p := ColCount;
+
+  if n = 0 then
+    Error(ER_EMPTY_MATRIX);
+
   if p = 0 then
-    exit (new Vector(RowCount));
+    Error(ER_EMPTY_MATRIX);
 
   var means := RowMeans;
-  var n := RowCount;
+
   Result := new Vector(n);
 
   for var i := 0 to n - 1 do
@@ -658,10 +695,10 @@ function Matrix.ColumnMins: Vector;
 begin
   var n := RowCount;
   var p := ColCount;
-  
-  if n = 0 then
-    exit(new Vector(p));
 
+  if n = 0 then
+    Error(ER_EMPTY_MATRIX);
+  
   Result := new Vector(p);
 
   for var j := 0 to p - 1 do
@@ -678,10 +715,10 @@ function Matrix.ColumnMaxs: Vector;
 begin
   var n := RowCount;
   var p := ColCount;
-  
-  if n = 0 then
-    exit(new Vector(p));
 
+  if n = 0 then
+    Error(ER_EMPTY_MATRIX);
+  
   Result := new Vector(p);
 
   for var j := 0 to p - 1 do
@@ -700,8 +737,11 @@ begin
   var p := ColCount;
   
   if n = 0 then
-    exit(new Vector(p));
-
+    Error(ER_EMPTY_MATRIX);
+  
+  if p = 0 then
+    Error(ER_EMPTY_MATRIX);
+  
   Result := new Vector(n);
 
   for var i := 0 to n - 1 do
@@ -720,8 +760,11 @@ begin
   var p := ColCount;
   
   if n = 0 then
-    exit(new Vector(p));
+    Error(ER_EMPTY_MATRIX);
 
+  if p = 0 then
+    Error(ER_EMPTY_MATRIX);
+  
   Result := new Vector(n);
 
   for var i := 0 to n - 1 do
@@ -736,6 +779,15 @@ end;
 
 function Matrix.RowArgMin(i: integer): integer;
 begin
+  if RowCount = 0 then
+    Error(ER_EMPTY_MATRIX);
+
+  if ColCount = 0 then
+    Error(ER_EMPTY_MATRIX);
+
+  if (i < 0) or (i >= RowCount) then
+    ArgumentOutOfRangeError(ER_ROW_INDEX_OUT_OF_RANGE, i, RowCount);
+
   var minVal := fdata[i,0];
   var arg := 0;
 
@@ -756,6 +808,15 @@ end;
 
 function Matrix.RowArgMax(i: integer): integer;
 begin
+  if RowCount = 0 then
+    Error(ER_EMPTY_MATRIX);
+
+  if ColCount = 0 then
+    Error(ER_EMPTY_MATRIX);
+
+  if (i < 0) or (i >= RowCount) then
+    ArgumentOutOfRangeError(ER_ROW_INDEX_OUT_OF_RANGE, i, RowCount);
+
   var maxVal := fdata[i,0];
   var arg := 0;
 
@@ -776,6 +837,12 @@ end;
 
 function Matrix.RowSum(i: integer): real;
 begin
+  if RowCount = 0 then
+    Error(ER_EMPTY_MATRIX);
+
+  if (i < 0) or (i >= RowCount) then
+    ArgumentOutOfRangeError(ER_ROW_INDEX_OUT_OF_RANGE, i, RowCount);
+
   var sum := 0.0;
 
   for var j := 0 to ColCount - 1 do
@@ -810,6 +877,9 @@ end;
 
 function Matrix.ColumnArgMin(j: integer): integer;
 begin
+  if (j < 0) or (j >= ColCount) then
+    ArgumentOutOfRangeError(ER_COL_INDEX_OUT_OF_RANGE, j, ColCount); 
+    
   var n := RowCount;
 
   if n = 0 then
@@ -835,6 +905,9 @@ end;
 
 function Matrix.ColumnArgMax(j: integer): integer;
 begin
+  if (j < 0) or (j >= ColCount) then
+    ArgumentOutOfRangeError(ER_COL_INDEX_OUT_OF_RANGE, j, ColCount); 
+    
   var n := RowCount;
 
   if n = 0 then
@@ -895,6 +968,9 @@ end;
 
 function Matrix.FrobeniusNorm: real;
 begin
+  if RowCount = 0 then
+    Error(ER_EMPTY_MATRIX);
+  
   var s := 0.0;
   for var i := 0 to RowCount - 1 do
     for var j := 0 to ColCount - 1 do
@@ -905,6 +981,10 @@ end;
 procedure Matrix.AddScaledIdentity(lambda: real);
 begin
   var n := RowCount;
+  
+  if RowCount <> ColCount then
+    ArgumentError(ER_MATRIX_NOT_SQUARE);
+  
   for var i := 0 to n - 1 do
     fdata[i, i] += lambda;
 end;
@@ -1060,6 +1140,7 @@ function Matrix.GetRow(i: integer): Vector;
 begin
   if (i < 0) or (i >= RowCount) then
     ArgumentOutOfRangeError(ER_ROW_INDEX_OUT_OF_RANGE, i, RowCount);
+  
   Result := new Vector(ColCount);
   for var j := 0 to ColCount - 1 do
     Result[j] := fdata[i, j];
@@ -1067,8 +1148,14 @@ end;
 
 function Matrix.TakeRows(indices: array of integer): Matrix;
 begin
+  if indices = nil then
+    ArgumentNullError(ER_ARG_NULL, 'indices');
+  
   var n := indices.Length;
   var p := ColCount;
+  
+  if RowCount = 0 then
+    Error(ER_EMPTY_MATRIX);
 
   var res := new Matrix(n, p);
 
@@ -1124,6 +1211,7 @@ function Matrix.GetCol(j: integer): Vector;
 begin
   if (j < 0) or (j >= ColCount) then
     ArgumentOutOfRangeError(ER_COL_INDEX_OUT_OF_RANGE, j, ColCount);
+  
   Result := new Vector(RowCount);
   for var i := 0 to RowCount - 1 do
     Result[i] := fdata[i, j];
@@ -1141,6 +1229,12 @@ end;
 
 static function Matrix.OuterProduct(a, b: Vector): Matrix;
 begin
+  if a = nil then
+    ArgumentNullError(ER_ARG_NULL, 'a');
+  
+  if b = nil then
+    ArgumentNullError(ER_ARG_NULL, 'b');
+
   var m := a.Length;
   var n := b.Length;
   Result := new Matrix(m, n);

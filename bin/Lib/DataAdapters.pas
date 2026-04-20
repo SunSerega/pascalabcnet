@@ -25,9 +25,6 @@ const
     'Столбец "{0}" должен быть категориальным для EncodeLabels!!Column "{0}" must be categorical for EncodeLabels';
   ER_ENCODELABELS_UNSUPPORTED_TYPE =
     'Неподдерживаемый тип столбца "{0}" для EncodeLabels!!Unsupported column type "{0}" for EncodeLabels';
-  ER_UNKNOWN_CLASS_IN_TRANSFORM =
-    'Неизвестное значение класса "{0}" при преобразовании меток!!Unknown class value "{0}" in TransformLabels';
-  
     
 function ToMatrix(Self: DataFrame; colNames: array of string): Matrix; extensionmethod;
 begin
@@ -180,49 +177,25 @@ begin
   if not Self.IsCategorical(target) then
     ArgumentError(ER_ENCODELABELS_NOT_CATEGORICAL, target);
 
-  // --- строим mapping
-  var map := new Dictionary<string, integer>;
-  for var i := 0 to classes.Length - 1 do
-    map[classes[i]] := i;
-
   case Self.GetColumnType(target) of
-
+  
     ColumnType.ctStr:
       begin
         var data := Self.GetStrColumn(target).ToArray;
-        var res := new integer[data.Length];
-
-        for var i := 0 to data.Length - 1 do
-        begin
-          var lbl := data[i];
-
-          if not map.ContainsKey(lbl) then
-            Error(ER_UNKNOWN_CLASS_IN_TRANSFORM, lbl);
-
-          res[i] := map[lbl];
-        end;
-
-        Result := res;
+        Result := TransformLabels(data, classes);
       end;
-
+  
     ColumnType.ctInt:
       begin
         var data := Self.GetIntColumn(target).ToArray;
-        var res := new integer[data.Length];
-
+        var strData := new string[data.Length];
+  
         for var i := 0 to data.Length - 1 do
-        begin
-          var lbl := data[i].ToString;
-
-          if not map.ContainsKey(lbl) then
-            Error(ER_UNKNOWN_CLASS_IN_TRANSFORM, lbl);
-
-          res[i] := map[lbl];
-        end;
-
-        Result := res;
+          strData[i] := data[i].ToString;
+  
+        Result := TransformLabels(strData, classes);
       end;
-
+  
     else
       ArgumentError(ER_ENCODELABELS_UNSUPPORTED_TYPE, target);
   end;
@@ -252,25 +225,9 @@ begin
   if Self.GetColumnType(target) <> ColumnType.ctInt then
     ArgumentError(ER_ENCODELABELS_UNSUPPORTED_TYPE, target);
 
-  // --- mapping: значение → индекс
-  var map := new Dictionary<integer, integer>;
-  for var i := 0 to classes.Length - 1 do
-    map[classes[i]] := i;
-
   var data := Self.GetIntColumn(target).ToArray;
-  var res := new integer[data.Length];
 
-  for var i := 0 to data.Length - 1 do
-  begin
-    var v := data[i];
-
-    if not map.ContainsKey(v) then
-      Error(ER_UNKNOWN_CLASS_IN_TRANSFORM, v);
-
-    res[i] := map[v];
-  end;
-
-  Result := res;
+  Result := TransformLabelsInt(data, classes);
 end;
 
 /// Кодирует значения целочисленного категориального столбца DataFrame
